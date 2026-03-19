@@ -98,9 +98,16 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .tracker-reading strong{font-size:0.85rem;font-weight:700;margin-right:2px}
 .tracker-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:8px}
 .tracker-bar-fill{height:100%;border-radius:3px;transition:width 0.4s cubic-bezier(.4,0,.2,1)}
-.tracker-btns{display:flex;gap:4px;justify-content:flex-end}
+.tracker-controls{display:flex;gap:4px;align-items:center;justify-content:flex-end}
+.tracker-input{width:60px;padding:4px 6px;border:1px solid var(--border);background:var(--bg);border-radius:6px;font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--text);text-align:center;-webkit-appearance:none;appearance:none}
+.tracker-input:focus{outline:none;border-color:var(--accent-blue)}
+.tracker-add-btn{padding:4px 10px;border:1px solid var(--border);background:var(--bg);border-radius:6px;font-size:0.6rem;font-weight:600;color:var(--sub);cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all 0.1s}
+.tracker-add-btn:active{background:var(--border)}
+.tracker-btns{display:flex;gap:4px}
 .tracker-btn{width:32px;height:26px;border:1px solid var(--border);background:var(--bg);border-radius:6px;font-size:0.85rem;font-weight:600;color:var(--sub);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.1s;font-family:'DM Sans',sans-serif}
 .tracker-btn:active{background:var(--border);transform:scale(0.92)}
+.tracker-unit-toggle{font-size:0.5rem;font-family:'JetBrains Mono',monospace;color:var(--accent-blue);background:none;border:1px solid var(--accent-blue);padding:2px 6px;border-radius:4px;cursor:pointer;transition:all 0.1s}
+.tracker-unit-toggle:active{background:rgba(59,125,216,0.1)}
 .tracker-water .tracker-reading strong{color:var(--accent-blue)}
 .tracker-water .tracker-bar-fill{background:var(--accent-blue)}
 .tracker-protein .tracker-reading strong{color:var(--accent-warm)}
@@ -471,20 +478,46 @@ function render() {
   app.appendChild(statusBar);
 
   // Daily trackers — progress bar style
+  var waterUnit = state._waterUnit || 'ml';
+  var waterGoal = waterUnit === 'ml' ? 2500 : 84;
+  var waterUnitLabel = waterUnit === 'ml' ? 'ml' : 'oz';
+  var waterStep = waterUnit === 'ml' ? 250 : 8;
+
   var trackersDiv = document.createElement('div');
   trackersDiv.className = 'trackers';
   var trackerDefs = [
-    { key: 'water', label: 'Water', unit: 'glasses', step: 1, goal: 10, cls: 'tracker-water' },
-    { key: 'protein', label: 'Protein', unit: 'g', step: 10, goal: 150, cls: 'tracker-protein' }
+    { key: 'water', label: 'Water', unit: waterUnitLabel, step: waterStep, goal: waterGoal, cls: 'tracker-water', hasUnitToggle: true },
+    { key: 'protein', label: 'Protein', unit: 'g', step: 10, goal: 150, cls: 'tracker-protein', hasUnitToggle: false }
   ];
   trackerDefs.forEach(function(td) {
     var t = document.createElement('div');
     t.className = 'tracker ' + td.cls;
     var top = document.createElement('div');
     top.className = 'tracker-top';
+    var leftTop = document.createElement('div');
+    leftTop.style.cssText = 'display:flex;align-items:center;gap:6px';
     var lbl = document.createElement('div');
     lbl.className = 'tracker-label';
     lbl.textContent = td.label;
+    leftTop.appendChild(lbl);
+    if (td.hasUnitToggle) {
+      var toggle = document.createElement('button');
+      toggle.className = 'tracker-unit-toggle';
+      toggle.textContent = waterUnit === 'ml' ? 'oz' : 'ml';
+      toggle.addEventListener('click', function() {
+        var curVal = getTracker('water');
+        if (waterUnit === 'ml') {
+          state._waterUnit = 'oz';
+          state['_t_water'] = Math.round(curVal / 29.574);
+        } else {
+          state._waterUnit = 'ml';
+          state['_t_water'] = Math.round(curVal * 29.574);
+        }
+        saveState();
+        render();
+      });
+      leftTop.appendChild(toggle);
+    }
     var reading = document.createElement('div');
     reading.className = 'tracker-reading';
     var curVal = getTracker(td.key);
@@ -492,7 +525,7 @@ function render() {
     strong.textContent = curVal;
     reading.appendChild(strong);
     reading.appendChild(document.createTextNode(' / ' + td.goal + ' ' + td.unit));
-    top.appendChild(lbl);
+    top.appendChild(leftTop);
     top.appendChild(reading);
     var barWrap = document.createElement('div');
     barWrap.className = 'tracker-bar-wrap';
@@ -500,8 +533,10 @@ function render() {
     barFill.className = 'tracker-bar-fill';
     barFill.style.width = Math.min(100, Math.round((curVal / td.goal) * 100)) + '%';
     barWrap.appendChild(barFill);
-    var btns = document.createElement('div');
-    btns.className = 'tracker-btns';
+    var controls = document.createElement('div');
+    controls.className = 'tracker-controls';
+    var quickBtns = document.createElement('div');
+    quickBtns.className = 'tracker-btns';
     var minusBtn = document.createElement('button');
     minusBtn.className = 'tracker-btn';
     minusBtn.textContent = '\u2212';
@@ -514,11 +549,32 @@ function render() {
     plusBtn.addEventListener('click', (function(k, s) {
       return function() { adjustTracker(k, s); };
     })(td.key, td.step));
-    btns.appendChild(minusBtn);
-    btns.appendChild(plusBtn);
+    quickBtns.appendChild(minusBtn);
+    quickBtns.appendChild(plusBtn);
+    var inputField = document.createElement('input');
+    inputField.className = 'tracker-input';
+    inputField.type = 'number';
+    inputField.inputMode = 'numeric';
+    inputField.placeholder = td.unit;
+    inputField.min = '0';
+    var addBtn = document.createElement('button');
+    addBtn.className = 'tracker-add-btn';
+    addBtn.textContent = 'ADD';
+    addBtn.addEventListener('click', (function(k, inp) {
+      return function() {
+        var v = parseInt(inp.value, 10);
+        if (v && v > 0) { adjustTracker(k, v); inp.value = ''; }
+      };
+    })(td.key, inputField));
+    inputField.addEventListener('keydown', (function(btn) {
+      return function(e) { if (e.key === 'Enter') btn.click(); };
+    })(addBtn));
+    controls.appendChild(quickBtns);
+    controls.appendChild(inputField);
+    controls.appendChild(addBtn);
     t.appendChild(top);
     t.appendChild(barWrap);
-    t.appendChild(btns);
+    t.appendChild(controls);
     trackersDiv.appendChild(t);
   });
   app.appendChild(trackersDiv);
