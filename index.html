@@ -1160,6 +1160,27 @@ function render() {
   cafTotal.textContent = cafTotalMg > 0 ? cafTotalMg + ' mg total' : '';
   cafHeader.appendChild(cafTitle); cafHeader.appendChild(cafTotal);
   cafCard.appendChild(cafHeader);
+
+  // Caffeine progress bar (400mg limit)
+  var cafLimit = 400;
+  var cafPct = Math.min(100, Math.round((cafTotalMg / cafLimit) * 100));
+  var cafProgWrap = document.createElement('div');
+  cafProgWrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
+  var cafProgTrack = document.createElement('div');
+  cafProgTrack.style.cssText = 'flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden';
+  var cafProgFill = document.createElement('div');
+  var cafBarColor = cafTotalMg <= 200 ? 'var(--accent-green)' : cafTotalMg <= 300 ? 'var(--accent-gold)' : cafTotalMg <= 400 ? 'var(--accent-warm)' : 'var(--accent-pink)';
+  cafProgFill.style.cssText = 'height:100%;border-radius:3px;transition:width 0.4s ease;background:' + cafBarColor;
+  cafProgFill.style.width = cafPct + '%';
+  cafProgTrack.appendChild(cafProgFill);
+  var cafProgLabel = document.createElement('div');
+  cafProgLabel.style.cssText = 'font-family:"JetBrains Mono",monospace;font-size:0.6rem;color:var(--muted);min-width:70px;text-align:right';
+  cafProgLabel.textContent = cafTotalMg + ' / ' + cafLimit + ' mg';
+  if (cafTotalMg > cafLimit) { cafProgLabel.style.color = 'var(--accent-pink)'; cafProgLabel.textContent += ' ⚠'; }
+  cafProgWrap.appendChild(cafProgTrack);
+  cafProgWrap.appendChild(cafProgLabel);
+  cafCard.appendChild(cafProgWrap);
+
   var cafList = document.createElement('div');
   if (cafEntries.length === 0) {
     var cafEmpty = document.createElement('div');
