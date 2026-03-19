@@ -461,21 +461,7 @@ function render() {
   dateLine.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   app.appendChild(dateLine);
 
-  // Status bar
-  const statusBar = document.createElement('div');
-  statusBar.className = 'status-bar';
-  const track = document.createElement('div');
-  track.className = 'progress-track';
-  const fill = document.createElement('div');
-  fill.className = 'progress-fill';
-  fill.style.width = pct + '%';
-  track.appendChild(fill);
-  const label = document.createElement('div');
-  label.className = 'progress-label';
-  label.textContent = done + '/' + total;
-  statusBar.appendChild(track);
-  statusBar.appendChild(label);
-  app.appendChild(statusBar);
+  // Status bar removed
 
   // Daily trackers — progress bar style
   var waterUnit = state._waterUnit || 'ml';
