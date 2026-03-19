@@ -224,6 +224,16 @@ const PHASES = [
     note: 'Wait 30-60 min before food. Tyrosine needs empty stomach for BBB transport. Consider cycling 5 on / 2 off.'
   },
   {
+    id: 'morning_hygiene',
+    name: 'Morning hygiene',
+    context: 'after waking',
+    color: '#5ab5bf',
+    items: [
+      { id: 'brush_am', name: 'Brush teeth', dose: '2 min' },
+      { id: 'floss_am', name: 'Floss', dose: 'full mouth' },
+    ]
+  },
+  {
     id: 'breakfast',
     name: 'Breakfast',
     context: 'with food + fat',
@@ -259,6 +269,16 @@ const PHASES = [
       { id: 'magbisgly', name: 'Mag bisglycinate powder', dose: '200-300 mg elemental' },
     ],
     note: 'Magnesium is an NMDA antagonist \u2192 blocks stimulant tolerance/sensitization (Wolf 1998). Still take on zero-sleep nights.'
+  },
+  {
+    id: 'night_hygiene',
+    name: 'Night hygiene',
+    context: 'before bed',
+    color: '#5ab5bf',
+    items: [
+      { id: 'brush_pm', name: 'Brush teeth', dose: '2 min' },
+      { id: 'floss_pm', name: 'Floss', dose: 'full mouth' },
+    ]
   }
 ];
 let state = {};
