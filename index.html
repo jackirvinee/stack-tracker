@@ -162,6 +162,32 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .caf-timer{padding:4px 0 2px;margin-top:2px}
 .caf-timer-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:2px}
 .caf-timer-fill{height:100%;border-radius:2px;background:var(--accent-gold);transition:width 1s linear}
+.bfrb-tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
+.bfrb-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.bfrb-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-purple);font-weight:500}
+.bfrb-count{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.bfrb-stats{display:flex;gap:12px;margin-bottom:10px;padding:8px 10px;background:var(--bg);border-radius:8px}
+.bfrb-stat{text-align:center;flex:1}
+.bfrb-stat-val{font-size:0.9rem;font-weight:700;color:var(--text)}
+.bfrb-stat-label{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em}
+.bfrb-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.bfrb-item:last-child{border-bottom:none}
+.bfrb-item-time{font-size:0.6rem;color:var(--accent-purple);font-family:'JetBrains Mono',monospace;min-width:50px;font-weight:500}
+.bfrb-item-info{flex:1;min-width:0}
+.bfrb-item-intensity{font-size:0.72rem;font-weight:500}
+.bfrb-item-trigger{font-size:0.55rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.bfrb-item-note{font-size:0.6rem;color:var(--sub);font-style:italic;margin-top:1px}
+.bfrb-item-x{font-size:0.6rem;color:var(--dim);background:none;border:none;cursor:pointer;padding:2px 6px;font-family:'JetBrains Mono',monospace}
+.bfrb-log-btn{width:100%;padding:8px;border:1px dashed var(--accent-purple);background:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-purple);cursor:pointer;letter-spacing:0.03em;transition:all 0.15s}
+.bfrb-log-btn:active{background:#f8f0ff}
+.bfrb-tip{padding:8px 10px;margin-top:8px;background:var(--bg);border-radius:8px;font-size:0.6rem;color:var(--sub);line-height:1.5}
+.bfrb-tip strong{color:var(--accent-purple);font-weight:600}
+.bfrb-modal-intensity{display:flex;gap:6px;margin:6px 0 10px}
+.bfrb-modal-intensity button{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--card);font-family:'JetBrains Mono',monospace;font-size:0.65rem;cursor:pointer;text-align:center;transition:all 0.15s}
+.bfrb-modal-intensity button.selected{border-color:var(--accent-purple);background:#f8f0ff;color:var(--accent-purple);font-weight:600}
+.bfrb-modal-triggers{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 10px}
+.bfrb-modal-triggers button{padding:5px 10px;border:1px solid var(--border);border-radius:16px;background:var(--card);font-size:0.6rem;cursor:pointer;transition:all 0.15s}
+.bfrb-modal-triggers button.selected{border-color:var(--accent-purple);background:#f8f0ff;color:var(--accent-purple)}
 .caf-timer-label{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
 /* Food log */
 .food-log{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
@@ -396,6 +422,32 @@ function removeCafDose(ts) {
   if (!state._cafLog) return;
   state._cafLog = state._cafLog.filter(function(e) { return e.ts !== ts; });
   saveState(); render();
+}
+// --- Hair pulling (BFRB) tracker ---
+function getBfrbLog() { return state._bfrbLog || []; }
+function addBfrbEntry(intensity, trigger, note) {
+  if (!state._bfrbLog) state._bfrbLog = [];
+  var ts = Date.now();
+  var timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  state._bfrbLog.push({ ts: ts, time: timeStr, intensity: intensity, trigger: trigger, note: note || '' });
+  saveState(); render();
+}
+function removeBfrbEntry(ts) {
+  if (!state._bfrbLog) return;
+  state._bfrbLog = state._bfrbLog.filter(function(e) { return e.ts !== ts; });
+  saveState(); render();
+}
+function getBfrbStats() {
+  var log = getBfrbLog();
+  var total = log.length;
+  var avgIntensity = total > 0 ? Math.round(log.reduce(function(s, e) { return s + e.intensity; }, 0) / total * 10) / 10 : 0;
+  // Check if dex is active
+  var dexLog = state._dexLog || [];
+  var dexActive = dexLog.some(function(d) { return (Date.now() - d.ts) < 600 * 60000; });
+  // Count by trigger
+  var triggers = {};
+  log.forEach(function(e) { if (e.trigger) triggers[e.trigger] = (triggers[e.trigger] || 0) + 1; });
+  return { total: total, avgIntensity: avgIntensity, dexActive: dexActive, triggers: triggers };
 }
 // --- Sleep ---
 function getSleep() { return (state._sleep || {}).hours || 0; }
@@ -770,6 +822,88 @@ function showCafModal() {
   modal.appendChild(timeLabel); modal.appendChild(timeInput);
   modal.appendChild(btns); overlay.appendChild(modal);
   document.body.appendChild(overlay); mgInput.focus();
+}
+
+function showBfrbModal() {
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal';
+  var h3 = document.createElement('h3');
+  h3.textContent = 'Log pulling episode';
+
+  // Intensity
+  var intLabel = document.createElement('label');
+  intLabel.textContent = 'Intensity';
+  var intRow = document.createElement('div');
+  intRow.className = 'bfrb-modal-intensity';
+  var selectedIntensity = 0;
+  [1,2,3,4,5].forEach(function(n) {
+    var btn = document.createElement('button');
+    btn.textContent = n;
+    btn.addEventListener('click', function() {
+      selectedIntensity = n;
+      intRow.querySelectorAll('button').forEach(function(b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+    });
+    intRow.appendChild(btn);
+  });
+
+  // Trigger
+  var trigLabel = document.createElement('label');
+  trigLabel.textContent = 'Trigger (optional)';
+  var trigRow = document.createElement('div');
+  trigRow.className = 'bfrb-modal-triggers';
+  var TRIGGERS = ['Stress', 'Boredom', 'Anxiety', 'Focusing', 'Tired', 'Stimulant', 'Phone/screen', 'Waiting', 'Reading'];
+  var selectedTrigger = '';
+  TRIGGERS.forEach(function(t) {
+    var btn = document.createElement('button');
+    btn.textContent = t;
+    btn.addEventListener('click', function() {
+      if (selectedTrigger === t) {
+        selectedTrigger = '';
+        btn.classList.remove('selected');
+      } else {
+        selectedTrigger = t;
+        trigRow.querySelectorAll('button').forEach(function(b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+      }
+    });
+    trigRow.appendChild(btn);
+  });
+
+  // Note
+  var noteLabel = document.createElement('label');
+  noteLabel.textContent = 'Note (optional)';
+  var noteInput = document.createElement('input');
+  noteInput.type = 'text';
+  noteInput.placeholder = 'What were you doing?';
+
+  var btns = document.createElement('div');
+  btns.className = 'dose-modal-btns';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'modal-cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'modal-save';
+  saveBtn.style.background = 'var(--accent-purple)';
+  saveBtn.textContent = 'Log episode';
+  saveBtn.addEventListener('click', function() {
+    if (!selectedIntensity) { intRow.querySelector('button').focus(); return; }
+    addBfrbEntry(selectedIntensity, selectedTrigger, noteInput.value.trim());
+    overlay.remove();
+  });
+  btns.appendChild(cancelBtn); btns.appendChild(saveBtn);
+
+  modal.appendChild(h3);
+  modal.appendChild(intLabel); modal.appendChild(intRow);
+  modal.appendChild(trigLabel); modal.appendChild(trigRow);
+  modal.appendChild(noteLabel); modal.appendChild(noteInput);
+  modal.appendChild(btns);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
 }
 
 function showFoodModal() {
@@ -1255,6 +1389,129 @@ function render() {
   cafBtn.addEventListener('click', showCafModal);
   cafCard.appendChild(cafBtn);
   app.appendChild(cafCard);
+
+  // BFRB (hair pulling) tracker
+  var bfrbCard = document.createElement('div');
+  bfrbCard.className = 'bfrb-tracker';
+  var bfrbHeader = document.createElement('div');
+  bfrbHeader.className = 'bfrb-header';
+  var bfrbTitle = document.createElement('div');
+  bfrbTitle.className = 'bfrb-title';
+  bfrbTitle.textContent = 'Hair pulling tracker';
+  var bfrbEntries = getBfrbLog();
+  var bfrbStats = getBfrbStats();
+  var bfrbCountEl = document.createElement('div');
+  bfrbCountEl.className = 'bfrb-count';
+  bfrbCountEl.textContent = bfrbEntries.length > 0 ? bfrbEntries.length + ' episode' + (bfrbEntries.length !== 1 ? 's' : '') + ' today' : '';
+  bfrbHeader.appendChild(bfrbTitle); bfrbHeader.appendChild(bfrbCountEl);
+  bfrbCard.appendChild(bfrbHeader);
+
+  // Stats row if there are entries
+  if (bfrbEntries.length > 0) {
+    var statsRow = document.createElement('div');
+    statsRow.className = 'bfrb-stats';
+    var statEps = document.createElement('div');
+    statEps.className = 'bfrb-stat';
+    var statEpsVal = document.createElement('div');
+    statEpsVal.className = 'bfrb-stat-val';
+    statEpsVal.textContent = bfrbStats.total;
+    statEpsVal.style.color = bfrbStats.total <= 2 ? 'var(--accent-green)' : bfrbStats.total <= 5 ? 'var(--accent-gold)' : 'var(--accent-pink)';
+    var statEpsLbl = document.createElement('div');
+    statEpsLbl.className = 'bfrb-stat-label';
+    statEpsLbl.textContent = 'Episodes';
+    statEps.appendChild(statEpsVal); statEps.appendChild(statEpsLbl);
+
+    var statInt = document.createElement('div');
+    statInt.className = 'bfrb-stat';
+    var statIntVal = document.createElement('div');
+    statIntVal.className = 'bfrb-stat-val';
+    statIntVal.textContent = bfrbStats.avgIntensity + '/5';
+    var statIntLbl = document.createElement('div');
+    statIntLbl.className = 'bfrb-stat-label';
+    statIntLbl.textContent = 'Avg intensity';
+    statInt.appendChild(statIntVal); statInt.appendChild(statIntLbl);
+
+    var statDex = document.createElement('div');
+    statDex.className = 'bfrb-stat';
+    var statDexVal = document.createElement('div');
+    statDexVal.className = 'bfrb-stat-val';
+    statDexVal.textContent = bfrbStats.dexActive ? 'ON' : 'OFF';
+    statDexVal.style.color = bfrbStats.dexActive ? 'var(--accent-pink)' : 'var(--muted)';
+    var statDexLbl = document.createElement('div');
+    statDexLbl.className = 'bfrb-stat-label';
+    statDexLbl.textContent = 'Dex status';
+    statDex.appendChild(statDexVal); statDex.appendChild(statDexLbl);
+
+    statsRow.appendChild(statEps); statsRow.appendChild(statInt); statsRow.appendChild(statDex);
+    bfrbCard.appendChild(statsRow);
+
+    // Top trigger
+    var topTrigger = Object.keys(bfrbStats.triggers).sort(function(a, b) { return bfrbStats.triggers[b] - bfrbStats.triggers[a]; })[0];
+    if (topTrigger) {
+      var trigTip = document.createElement('div');
+      trigTip.className = 'bfrb-tip';
+      trigTip.innerHTML = '<strong>Top trigger:</strong> ' + topTrigger + ' (' + bfrbStats.triggers[topTrigger] + 'x) — try a competing response next time: clench fist for 60s or hold a fidget.';
+      bfrbCard.appendChild(trigTip);
+    }
+  }
+
+  // Log entries
+  var bfrbList = document.createElement('div');
+  if (bfrbEntries.length === 0) {
+    var bfrbEmpty = document.createElement('div');
+    bfrbEmpty.className = 'dex-empty';
+    bfrbEmpty.textContent = 'No episodes logged — great day so far';
+    bfrbList.appendChild(bfrbEmpty);
+  } else {
+    bfrbEntries.slice().reverse().forEach(function(entry) {
+      var row = document.createElement('div');
+      row.className = 'bfrb-item';
+      var timeEl = document.createElement('div');
+      timeEl.className = 'bfrb-item-time'; timeEl.textContent = entry.time;
+      var infoEl = document.createElement('div');
+      infoEl.className = 'bfrb-item-info';
+      var intEl = document.createElement('div');
+      intEl.className = 'bfrb-item-intensity';
+      var dots = '';
+      for (var di = 0; di < 5; di++) dots += di < entry.intensity ? '●' : '○';
+      intEl.textContent = dots + ' ' + entry.intensity + '/5';
+      intEl.style.color = entry.intensity <= 2 ? 'var(--accent-green)' : entry.intensity <= 3 ? 'var(--accent-gold)' : 'var(--accent-pink)';
+      infoEl.appendChild(intEl);
+      if (entry.trigger) {
+        var trigEl = document.createElement('div');
+        trigEl.className = 'bfrb-item-trigger'; trigEl.textContent = entry.trigger;
+        infoEl.appendChild(trigEl);
+      }
+      if (entry.note) {
+        var noteEl = document.createElement('div');
+        noteEl.className = 'bfrb-item-note'; noteEl.textContent = entry.note;
+        infoEl.appendChild(noteEl);
+      }
+      var delBtn = document.createElement('button');
+      delBtn.className = 'bfrb-item-x'; delBtn.textContent = '\u00d7';
+      delBtn.addEventListener('click', (function(ts) { return function() { removeBfrbEntry(ts); }; })(entry.ts));
+      row.appendChild(timeEl); row.appendChild(infoEl); row.appendChild(delBtn);
+      bfrbList.appendChild(row);
+    });
+  }
+  bfrbCard.appendChild(bfrbList);
+
+  var bfrbBtn = document.createElement('button');
+  bfrbBtn.className = 'bfrb-log-btn';
+  bfrbBtn.textContent = '+ log episode';
+  bfrbBtn.addEventListener('click', showBfrbModal);
+  bfrbCard.appendChild(bfrbBtn);
+
+  // NAC reminder if episodes > 2
+  if (bfrbEntries.length >= 2) {
+    var nacTip = document.createElement('div');
+    nacTip.className = 'bfrb-tip';
+    nacTip.style.marginTop = '8px';
+    nacTip.innerHTML = '<strong>NAC reminder:</strong> Grant 2009 RCT found 1200mg 2x/day reduced pulling in 56% of participants. Consider a second NAC dose at bedtime.';
+    bfrbCard.appendChild(nacTip);
+  }
+
+  app.appendChild(bfrbCard);
 
   // Food log
   var foodCard = document.createElement('div');
