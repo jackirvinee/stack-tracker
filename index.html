@@ -613,6 +613,13 @@ function showDoseModal() {
   mgInput.min = '0';
   mgInput.step = '2.5';
 
+  var dateLabel = document.createElement('label');
+  dateLabel.textContent = 'Date';
+  var dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  var todayISO = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-' + String(new Date().getDate()).padStart(2, '0');
+  dateInput.value = todayISO;
+
   var timeLabel = document.createElement('label');
   timeLabel.textContent = 'Time taken';
   var timeInput = document.createElement('input');
@@ -645,12 +652,21 @@ function showDoseModal() {
   saveBtn.addEventListener('click', function() {
     var mg = mgInput.value.trim();
     if (!mg) { mgInput.focus(); return; }
-    // Parse custom time
+    // Parse custom date + time
+    var dateParts = dateInput.value.split('-');
     var timeParts = timeInput.value.split(':');
-    var doseDate = new Date();
-    doseDate.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0, 0);
+    var doseDate = new Date(
+      parseInt(dateParts[0], 10),
+      parseInt(dateParts[1], 10) - 1,
+      parseInt(dateParts[2], 10),
+      parseInt(timeParts[0], 10),
+      parseInt(timeParts[1], 10), 0, 0
+    );
     var displayTime = doseDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    addDexDose(typeSelect.value, mg, displayTime, doseDate.getTime());
+    var displayDate = doseDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    var isToday = doseDate.toDateString() === new Date().toDateString();
+    var timeLabel = isToday ? displayTime : displayDate + ' ' + displayTime;
+    addDexDose(typeSelect.value, mg, timeLabel, doseDate.getTime());
 
     // Schedule notifications based on IR vs XR
     if (notifCheck.checked) {
@@ -671,6 +687,8 @@ function showDoseModal() {
   modal.appendChild(typeSelect);
   modal.appendChild(mgLabel);
   modal.appendChild(mgInput);
+  modal.appendChild(dateLabel);
+  modal.appendChild(dateInput);
   modal.appendChild(timeLabel);
   modal.appendChild(timeInput);
   modal.appendChild(notifRow);
