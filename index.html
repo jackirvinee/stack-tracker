@@ -126,6 +126,86 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .dex-empty{font-size:0.6rem;color:var(--dim);padding:4px 0}
 .dex-log-btn{width:100%;padding:8px;border:1px dashed var(--accent-pink);background:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-pink);cursor:pointer;letter-spacing:0.03em;transition:all 0.15s}
 .dex-log-btn:active{background:#fef0f3}
+/* Dex effectiveness timer */
+.dex-timer{padding:4px 0 2px;margin-top:2px}
+.dex-timer-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:3px}
+.dex-timer-fill{height:100%;border-radius:2px;transition:width 1s linear}
+.dex-timer-row{display:flex;justify-content:space-between;align-items:center}
+.dex-timer-label{font-size:0.5rem;font-family:'JetBrains Mono',monospace;font-weight:500}
+.dex-timer-eta{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+/* Sleep tracker */
+.sleep-tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);margin-bottom:16px}
+.sleep-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.sleep-label{font-size:0.55rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-purple);font-weight:500}
+.sleep-reading{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.sleep-reading strong{font-size:0.85rem;font-weight:700;margin-right:2px}
+.sleep-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:8px}
+.sleep-bar-fill{height:100%;border-radius:3px;transition:width 0.4s cubic-bezier(.4,0,.2,1)}
+.sleep-controls{display:flex;gap:6px;align-items:center}
+.sleep-range{flex:1;height:4px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;outline:none}
+.sleep-range::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent-purple);border:2px solid var(--card);box-shadow:var(--shadow);cursor:pointer}
+.sleep-val{font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--text);font-weight:500;min-width:32px;text-align:center}
+.sleep-deficit{font-size:0.55rem;font-family:'JetBrains Mono',monospace;margin-top:4px}
+/* Caffeine tracker */
+.caf-tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
+.caf-tracker-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.caf-tracker-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-gold);font-weight:500}
+.caf-tracker-total{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.caf-log-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.caf-log-item:last-child{border-bottom:none}
+.caf-log-time{font-size:0.6rem;color:var(--accent-gold);font-family:'JetBrains Mono',monospace;min-width:50px;font-weight:500}
+.caf-log-info{flex:1;font-size:0.72rem;color:var(--text);font-weight:500}
+.caf-log-badge{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted);padding:2px 5px;border:1px solid var(--border);border-radius:4px}
+.caf-log-x{font-size:0.6rem;color:var(--dim);background:none;border:none;cursor:pointer;padding:2px 6px;font-family:'JetBrains Mono',monospace}
+.caf-log-btn{width:100%;padding:8px;border:1px dashed var(--accent-gold);background:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-gold);cursor:pointer;letter-spacing:0.03em;transition:all 0.15s}
+.caf-log-btn:active{background:#fdf8ee}
+.caf-timer{padding:4px 0 2px;margin-top:2px}
+.caf-timer-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:2px}
+.caf-timer-fill{height:100%;border-radius:2px;background:var(--accent-gold);transition:width 1s linear}
+.caf-timer-label{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+/* Food log */
+.food-log{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
+.food-log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.food-log-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-green);font-weight:500}
+.food-entry{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.food-entry:last-of-type{border-bottom:none}
+.food-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;flex-shrink:0;background:var(--border)}
+.food-entry-body{flex:1;min-width:0}
+.food-entry-desc{font-size:0.72rem;color:var(--text);font-weight:500;margin-bottom:2px}
+.food-entry-meta{font-size:0.5rem;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:4px}
+.food-cats{display:flex;flex-wrap:wrap;gap:3px}
+.food-cat-pill{font-size:0.42rem;font-family:'JetBrains Mono',monospace;padding:1px 5px;border-radius:3px;background:var(--done-bg);color:var(--done-text);text-transform:uppercase;letter-spacing:0.03em}
+.food-entry-x{font-size:0.6rem;color:var(--dim);background:none;border:none;cursor:pointer;padding:2px 6px;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.food-add-btn{width:100%;padding:8px;border:1px dashed var(--accent-green);background:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-green);cursor:pointer;letter-spacing:0.03em;transition:all 0.15s}
+.food-add-btn:active{background:#f0faf4}
+.food-summary{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.food-summary-title{font-size:0.5rem;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
+.food-summary-grid{display:flex;flex-wrap:wrap;gap:4px}
+.food-summary-item{font-size:0.45rem;font-family:'JetBrains Mono',monospace;padding:2px 6px;border-radius:4px;border:1px solid var(--border);color:var(--dim)}
+.food-summary-item.covered{background:var(--done-bg);border-color:var(--done-border);color:var(--done-text)}
+.food-rec{margin-top:8px;font-size:0.6rem;color:var(--accent-gold);font-style:italic;line-height:1.5}
+.food-modal .food-cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.food-modal .food-cat-opt{display:flex;align-items:center;gap:6px;font-size:0.7rem;color:var(--sub);cursor:pointer}
+.food-modal .food-cat-opt input{accent-color:var(--accent-green);width:16px;height:16px}
+.food-modal .photo-preview{width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px;display:none}
+/* Recovery protocol */
+.recovery-btn{width:100%;padding:12px;border:1px solid var(--accent-purple);background:linear-gradient(135deg,rgba(124,77,202,0.06),rgba(59,125,216,0.06));border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:600;color:var(--accent-purple);cursor:pointer;transition:all 0.15s;margin-bottom:24px}
+.recovery-btn:active{background:linear-gradient(135deg,rgba(124,77,202,0.12),rgba(59,125,216,0.12))}
+.recovery-active{background:var(--card);border:1px solid var(--accent-purple);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
+.recovery-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.recovery-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-purple);font-weight:500}
+.recovery-progress{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.recovery-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;cursor:pointer;transition:all 0.15s;user-select:none}
+.recovery-item:active{transform:scale(0.985)}
+.recovery-item.done{background:var(--done-bg);border-color:var(--done-border)}
+.recovery-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--dim);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.recovery-item.done .recovery-check{border-color:var(--accent-purple);background:var(--accent-purple)}
+.recovery-item-text{font-size:0.72rem;color:var(--sub)}
+.recovery-item.done .recovery-item-text{color:var(--done-text)}
+.recovery-dismiss{font-size:0.5rem;font-family:'JetBrains Mono',monospace;color:var(--muted);background:none;border:1px solid var(--border);padding:3px 8px;border-radius:4px;cursor:pointer;margin-top:8px}
+.recovery-time-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.recovery-time-btn{padding:12px 8px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:500;color:var(--sub);cursor:pointer;text-align:center;transition:all 0.15s}
+.recovery-time-btn:active{background:rgba(124,77,202,0.1);border-color:var(--accent-purple);color:var(--accent-purple)}
 </style>
 </head>
 <body>
@@ -276,6 +356,107 @@ function removeDexDose(ts) {
   saveState();
   render();
 }
+// --- Caffeine log ---
+function getCafLog() { return state._cafLog || []; }
+function addCafDose(type, mg, customTime) {
+  if (!state._cafLog) state._cafLog = [];
+  var timeStr = customTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  var ts = Date.now();
+  state._cafLog.push({ type: type, mg: mg, time: timeStr, ts: ts });
+  saveState(); render(); return ts;
+}
+function removeCafDose(ts) {
+  if (!state._cafLog) return;
+  state._cafLog = state._cafLog.filter(function(e) { return e.ts !== ts; });
+  saveState(); render();
+}
+// --- Sleep ---
+function getSleep() { return (state._sleep || {}).hours || 0; }
+function setSleep(hours) {
+  state._sleep = { hours: hours };
+  saveState(); render();
+}
+// --- Food log ---
+function getFoodLog() { return state._foodLog || []; }
+function addFoodEntry(desc, photo, categories) {
+  if (!state._foodLog) state._foodLog = [];
+  var ts = Date.now();
+  var timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  state._foodLog.push({ ts: ts, time: timeStr, desc: desc, photo: photo || null, categories: categories });
+  saveState(); render();
+}
+function removeFoodEntry(ts) {
+  if (!state._foodLog) return;
+  state._foodLog = state._foodLog.filter(function(e) { return e.ts !== ts; });
+  saveState(); render();
+}
+function compressPhoto(file, maxPx, quality, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > h) { if (w > maxPx) { h = h * maxPx / w; w = maxPx; } }
+      else { if (h > maxPx) { w = w * maxPx / h; h = maxPx; } }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+// --- Recovery protocol ---
+function getRecovery() { return state._recovery || null; }
+function startRecovery(timeWindow) {
+  var ctx = buildRecoveryContext(timeWindow);
+  state._recovery = { timeWindow: timeWindow, startedAt: Date.now(), items: ctx.items };
+  saveState(); render();
+}
+function toggleRecoveryItem(idx) {
+  if (!state._recovery || !state._recovery.items[idx]) return;
+  state._recovery.items[idx].checked = !state._recovery.items[idx].checked;
+  saveState(); render();
+}
+function dismissRecovery() { delete state._recovery; saveState(); render(); }
+function buildRecoveryContext(timeWindow) {
+  var waterPct = waterGoalGlobal > 0 ? (getTracker('water') / waterGoalGlobal * 100) : 100;
+  var proteinPct = getTracker('protein') / 150 * 100;
+  var sleepHrs = getSleep();
+  var dexLog = getDexLog();
+  var dexActive = dexLog.some(function(d) { return (Date.now() - d.ts) < (DEX_PK[d.type] || DEX_PK.XR).totalMin * 60000; });
+  var foodLog = getFoodLog();
+  var coveredCats = {};
+  foodLog.forEach(function(f) { (f.categories || []).forEach(function(c) { coveredCats[c] = true; }); });
+  var missingCats = FOOD_CATEGORIES.filter(function(c) { return !coveredCats[c]; });
+  var hour = new Date().getHours();
+  var isBedtime = hour >= 20 || hour < 5;
+  var items = [];
+  if (waterPct < 50) items.push({ text: 'Drink 500ml water NOW — you\'re under 50% hydration', checked: false, priority: 1 });
+  else if (waterPct < 80) items.push({ text: 'Drink a glass of water — dehydration impairs cognition', checked: false, priority: 2 });
+  if (proteinPct < 40) items.push({ text: 'Eat protein + complex carbs within 30 min', checked: false, priority: 1 });
+  if (dexActive) items.push({ text: 'Take NAC 600mg — restore glutathione after stimulant oxidative stress', checked: false, priority: 2 });
+  if (sleepHrs > 0 && sleepHrs < 6) items.push({ text: 'Sleep deficit detected (' + sleepHrs + 'hr) — prioritize 8+ hr tonight', checked: false, priority: 2 });
+  if (isBedtime && timeWindow >= 30) items.push({ text: 'Take magnesium bisglycinate 300mg (NMDA antagonist — blocks tolerance)', checked: false, priority: 1 });
+  if (isBedtime && timeWindow >= 120) {
+    var melTime = new Date(Date.now() + (timeWindow - 60) * 60000);
+    items.push({ text: 'Take melatonin 0.3mg at ' + melTime.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + ' (2-3hr before sleep)', checked: false, priority: 3 });
+  }
+  if (isBedtime) items.push({ text: 'No screens 30 min before sleep — or use blue light filter', checked: false, priority: 2 });
+  if (timeWindow >= 10 && hour >= 6 && hour < 19) items.push({ text: '10 min walk outside — sunlight for circadian reset', checked: false, priority: 3 });
+  items.push({ text: 'Cold water on face + wrists — vagus nerve activation for calm', checked: false, priority: 4 });
+  if (missingCats.length > 0 && timeWindow >= 30) {
+    var top3 = missingCats.slice(0, 3);
+    var suggests = top3.map(function(c) { return NUTRIENT_MAP[c] ? NUTRIENT_MAP[c].suggest : c; });
+    items.push({ text: 'Eat: ' + suggests.join(' · '), checked: false, priority: 3 });
+  }
+  items.push({ text: 'Deep breaths — 4 sec in, 7 sec hold, 8 sec out (3 cycles)', checked: false, priority: 4 });
+  items.sort(function(a, b) { return a.priority - b.priority; });
+  return { items: items };
+}
+var waterGoalGlobal = 2500; // updated in render
+
 // --- Notification system ---
 var focusTimers = [];
 var FOCUS_SEQUENCES = {
@@ -315,6 +496,34 @@ var FOCUS_SEQUENCES = {
       { min: 480, title: 'XR window closed', body: '8 hours done. Take NAC + Vitamin C. Eat a real meal. You earned it.' }
     ]
   }
+};
+
+// Pharmacokinetics for timer display
+var DEX_PK = {
+  IR: { onsetMin: 30, peakEndMin: 150, totalMin: 300 },
+  XR: { onsetMin: 60, peakEndMin: 300, totalMin: 600 }
+};
+// Caffeine: half-life ~5hr, effective ~6hr, fully cleared ~10hr
+var CAF_HALF_LIFE_MIN = 300;
+var CAF_EFFECTIVE_MIN = 360;
+var CAF_TYPES = {
+  'Coffee': 95, 'Espresso': 63, 'Double espresso': 126,
+  'Tea': 47, 'Energy drink': 80, 'Caffeine pill': 200
+};
+
+// Food categories and nutrient mapping
+var FOOD_CATEGORIES = ['Protein','Leafy greens','Nuts/seeds','Dairy','Fruit','Whole grains','Fish/seafood','Red meat','Eggs','Legumes'];
+var NUTRIENT_MAP = {
+  'Protein':      { nutrients: ['protein','B12','zinc'], suggest: 'chicken, eggs, Greek yogurt, tofu' },
+  'Leafy greens': { nutrients: ['magnesium','folate','iron','vitamin K'], suggest: 'spinach, kale, broccoli' },
+  'Nuts/seeds':   { nutrients: ['magnesium','zinc','vitamin E'], suggest: 'almonds, pumpkin seeds, walnuts' },
+  'Dairy':        { nutrients: ['calcium','B12','vitamin D'], suggest: 'yogurt, cheese, milk' },
+  'Fruit':        { nutrients: ['vitamin C','potassium','fiber'], suggest: 'berries, banana, citrus (not near Dex)' },
+  'Whole grains': { nutrients: ['B vitamins','magnesium','fiber'], suggest: 'oats, brown rice, quinoa' },
+  'Fish/seafood': { nutrients: ['omega-3','selenium','vitamin D'], suggest: 'salmon, sardines, shrimp' },
+  'Red meat':     { nutrients: ['iron (heme)','B12','zinc','creatine'], suggest: 'beef, lamb, bison' },
+  'Eggs':         { nutrients: ['choline','B12','vitamin D','protein'], suggest: 'whole eggs (keep the yolks)' },
+  'Legumes':      { nutrients: ['fiber','iron','folate','protein'], suggest: 'lentils, chickpeas, black beans' }
 };
 
 function requestNotifPermission() {
@@ -463,6 +672,172 @@ function showDoseModal() {
   document.body.appendChild(overlay);
   mgInput.focus();
 }
+function showCafModal() {
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal';
+  var h3 = document.createElement('h3');
+  h3.textContent = 'Log caffeine';
+  var typeLabel = document.createElement('label');
+  typeLabel.textContent = 'Type';
+  var typeSelect = document.createElement('select');
+  Object.keys(CAF_TYPES).forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t; opt.textContent = t + ' (~' + CAF_TYPES[t] + 'mg)';
+    typeSelect.appendChild(opt);
+  });
+  var mgLabel = document.createElement('label');
+  mgLabel.textContent = 'Caffeine (mg)';
+  var mgInput = document.createElement('input');
+  mgInput.type = 'number'; mgInput.inputMode = 'numeric';
+  mgInput.value = String(CAF_TYPES['Coffee']); mgInput.min = '0';
+  typeSelect.addEventListener('change', function() {
+    mgInput.value = String(CAF_TYPES[typeSelect.value] || '');
+  });
+  var timeLabel = document.createElement('label');
+  timeLabel.textContent = 'Time';
+  var timeInput = document.createElement('input');
+  timeInput.type = 'time'; timeInput.value = getNowTimeString();
+  var btns = document.createElement('div');
+  btns.className = 'dose-modal-btns';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'modal-cancel'; cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'modal-save';
+  saveBtn.style.background = 'var(--accent-gold)';
+  saveBtn.textContent = 'Log caffeine';
+  saveBtn.addEventListener('click', function() {
+    var mg = mgInput.value.trim();
+    if (!mg) { mgInput.focus(); return; }
+    var timeParts = timeInput.value.split(':');
+    var d = new Date();
+    d.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0, 0);
+    var displayTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    addCafDose(typeSelect.value, mg, displayTime);
+    overlay.remove();
+  });
+  btns.appendChild(cancelBtn); btns.appendChild(saveBtn);
+  modal.appendChild(h3); modal.appendChild(typeLabel); modal.appendChild(typeSelect);
+  modal.appendChild(mgLabel); modal.appendChild(mgInput);
+  modal.appendChild(timeLabel); modal.appendChild(timeInput);
+  modal.appendChild(btns); overlay.appendChild(modal);
+  document.body.appendChild(overlay); mgInput.focus();
+}
+
+function showFoodModal() {
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal food-modal';
+  modal.style.maxWidth = '340px';
+  var h3 = document.createElement('h3');
+  h3.textContent = 'Log a meal';
+  // Photo input
+  var photoLabel = document.createElement('label');
+  photoLabel.textContent = 'Photo (optional)';
+  var photoInput = document.createElement('input');
+  photoInput.type = 'file'; photoInput.accept = 'image/*';
+  photoInput.setAttribute('capture', 'environment');
+  photoInput.style.cssText = 'margin-bottom:8px;font-size:0.7rem';
+  var preview = document.createElement('img');
+  preview.className = 'photo-preview';
+  var photoData = null;
+  photoInput.addEventListener('change', function() {
+    if (photoInput.files && photoInput.files[0]) {
+      compressPhoto(photoInput.files[0], 200, 0.5, function(base64) {
+        photoData = base64;
+        preview.src = base64;
+        preview.style.display = 'block';
+      });
+    }
+  });
+  // Description
+  var descLabel = document.createElement('label');
+  descLabel.textContent = 'What did you eat?';
+  var descInput = document.createElement('input');
+  descInput.type = 'text'; descInput.placeholder = 'e.g. eggs, toast, avocado';
+  // Categories
+  var catLabel = document.createElement('label');
+  catLabel.textContent = 'Food categories';
+  catLabel.style.marginBottom = '6px';
+  var catGrid = document.createElement('div');
+  catGrid.className = 'food-cat-grid';
+  var catChecks = [];
+  FOOD_CATEGORIES.forEach(function(cat) {
+    var opt = document.createElement('label');
+    opt.className = 'food-cat-opt';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = cat;
+    catChecks.push(cb);
+    opt.appendChild(cb);
+    opt.appendChild(document.createTextNode(cat));
+    catGrid.appendChild(opt);
+  });
+  var btns = document.createElement('div');
+  btns.className = 'dose-modal-btns';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'modal-cancel'; cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'modal-save';
+  saveBtn.style.background = 'var(--accent-green)';
+  saveBtn.textContent = 'Log meal';
+  saveBtn.addEventListener('click', function() {
+    var desc = descInput.value.trim();
+    if (!desc) { descInput.focus(); return; }
+    var cats = catChecks.filter(function(c) { return c.checked; }).map(function(c) { return c.value; });
+    addFoodEntry(desc, photoData, cats);
+    overlay.remove();
+  });
+  btns.appendChild(cancelBtn); btns.appendChild(saveBtn);
+  modal.appendChild(h3);
+  modal.appendChild(photoLabel); modal.appendChild(photoInput); modal.appendChild(preview);
+  modal.appendChild(descLabel); modal.appendChild(descInput);
+  modal.appendChild(catLabel); modal.appendChild(catGrid);
+  modal.appendChild(btns); overlay.appendChild(modal);
+  document.body.appendChild(overlay); descInput.focus();
+}
+
+function showRecoveryModal() {
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal';
+  modal.style.maxWidth = '340px';
+  var h3 = document.createElement('h3');
+  h3.textContent = 'Recovery Protocol';
+  h3.style.color = 'var(--accent-purple)';
+  var subtitle = document.createElement('p');
+  subtitle.style.cssText = 'font-size:0.7rem;color:var(--muted);margin-bottom:12px';
+  subtitle.textContent = 'How much time before you need to work?';
+  var grid = document.createElement('div');
+  grid.className = 'recovery-time-grid';
+  [{ label: '30 min', val: 30 }, { label: '1 hour', val: 60 }, { label: '2 hours', val: 120 },
+   { label: '4 hours', val: 240 }, { label: '8 hours', val: 480 }, { label: 'Full night', val: 600 }
+  ].forEach(function(opt) {
+    var btn = document.createElement('button');
+    btn.className = 'recovery-time-btn';
+    btn.textContent = opt.label;
+    btn.addEventListener('click', function() {
+      startRecovery(opt.val);
+      overlay.remove();
+    });
+    grid.appendChild(btn);
+  });
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'modal-cancel';
+  cancelBtn.style.cssText = 'width:100%;margin-top:12px;padding:10px;border-radius:8px;font-family:DM Sans;font-size:0.8rem;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--sub)';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  modal.appendChild(h3); modal.appendChild(subtitle); modal.appendChild(grid); modal.appendChild(cancelBtn);
+  overlay.appendChild(modal); document.body.appendChild(overlay);
+}
+
 function adjustTracker(key, delta) {
   var val = (state['_t_' + key] || 0) + delta;
   if (val < 0) val = 0;
@@ -607,6 +982,68 @@ function render() {
     trackersDiv.appendChild(t);
   });
   app.appendChild(trackersDiv);
+  waterGoalGlobal = waterGoal;
+
+  // Sleep tracker
+  var sleepCard = document.createElement('div');
+  sleepCard.className = 'sleep-tracker';
+  var sleepTop = document.createElement('div');
+  sleepTop.className = 'sleep-top';
+  var sleepLbl = document.createElement('div');
+  sleepLbl.className = 'sleep-label';
+  sleepLbl.textContent = 'Sleep';
+  var sleepReading = document.createElement('div');
+  sleepReading.className = 'sleep-reading';
+  var sleepHrs = getSleep();
+  var sleepStrong = document.createElement('strong');
+  sleepStrong.textContent = sleepHrs || '—';
+  var sleepColor = sleepHrs >= 7 ? 'var(--accent-green)' : sleepHrs >= 5 ? 'var(--accent-gold)' : 'var(--accent-pink)';
+  if (sleepHrs > 0) sleepStrong.style.color = sleepColor;
+  sleepReading.appendChild(sleepStrong);
+  sleepReading.appendChild(document.createTextNode(' / 8 hr'));
+  sleepTop.appendChild(sleepLbl);
+  sleepTop.appendChild(sleepReading);
+  var sleepBarWrap = document.createElement('div');
+  sleepBarWrap.className = 'sleep-bar-wrap';
+  var sleepBarFill = document.createElement('div');
+  sleepBarFill.className = 'sleep-bar-fill';
+  sleepBarFill.style.width = Math.min(100, Math.round((sleepHrs / 8) * 100)) + '%';
+  sleepBarFill.style.background = sleepColor;
+  sleepBarWrap.appendChild(sleepBarFill);
+  var sleepControls = document.createElement('div');
+  sleepControls.className = 'sleep-controls';
+  var sleepRange = document.createElement('input');
+  sleepRange.type = 'range'; sleepRange.className = 'sleep-range';
+  sleepRange.min = '0'; sleepRange.max = '12'; sleepRange.step = '0.5';
+  sleepRange.value = String(sleepHrs);
+  var sleepVal = document.createElement('div');
+  sleepVal.className = 'sleep-val';
+  sleepVal.textContent = sleepHrs > 0 ? sleepHrs + 'h' : '—';
+  sleepRange.addEventListener('input', function() {
+    sleepVal.textContent = parseFloat(sleepRange.value) + 'h';
+  });
+  sleepRange.addEventListener('change', function() {
+    setSleep(parseFloat(sleepRange.value));
+  });
+  sleepControls.appendChild(sleepRange);
+  sleepControls.appendChild(sleepVal);
+  sleepCard.appendChild(sleepTop);
+  sleepCard.appendChild(sleepBarWrap);
+  sleepCard.appendChild(sleepControls);
+  if (sleepHrs > 0 && sleepHrs < 8) {
+    var deficit = document.createElement('div');
+    deficit.className = 'sleep-deficit';
+    deficit.style.color = sleepColor;
+    deficit.textContent = 'Deficit: ' + (8 - sleepHrs) + ' hr';
+    sleepCard.appendChild(deficit);
+  } else if (sleepHrs >= 8) {
+    var wellRested = document.createElement('div');
+    wellRested.className = 'sleep-deficit';
+    wellRested.style.color = 'var(--accent-green)';
+    wellRested.textContent = 'Well rested';
+    sleepCard.appendChild(wellRested);
+  }
+  app.appendChild(sleepCard);
 
   // Dex dose tracker card
   var dexCard = document.createElement('div');
@@ -656,6 +1093,57 @@ function render() {
       row.appendChild(badge);
       row.appendChild(x);
       dexList.appendChild(row);
+      // Effectiveness timer
+      var pk = DEX_PK[entry.type] || DEX_PK.XR;
+      var elapsed = (Date.now() - entry.ts) / 60000;
+      if (elapsed < pk.totalMin * 1.1) {
+        var timer = document.createElement('div');
+        timer.className = 'dex-timer';
+        var tBar = document.createElement('div');
+        tBar.className = 'dex-timer-bar';
+        var tFill = document.createElement('div');
+        tFill.className = 'dex-timer-fill';
+        var remaining = Math.max(0, 1 - elapsed / pk.totalMin);
+        tFill.style.width = (remaining * 100) + '%';
+        var phase, phaseColor, phaseText;
+        if (elapsed < pk.onsetMin) {
+          phase = 'onset'; phaseColor = 'var(--accent-gold)';
+          var minLeft = Math.ceil(pk.onsetMin - elapsed);
+          phaseText = 'Onset — kicks in ' + minLeft + ' min';
+        } else if (elapsed < pk.peakEndMin) {
+          phase = 'peak'; phaseColor = 'var(--accent-green)';
+          var minLeft = Math.ceil(pk.peakEndMin - elapsed);
+          var hrsLeft = Math.floor(minLeft / 60);
+          var minsLeft = minLeft % 60;
+          phaseText = 'Peak' + (hrsLeft > 0 ? ' — ' + hrsLeft + 'h ' + minsLeft + 'm left' : ' — ' + minsLeft + 'm left');
+        } else if (elapsed < pk.totalMin) {
+          phase = 'fadeout'; phaseColor = 'var(--accent-gold)';
+          var minLeft = Math.ceil(pk.totalMin - elapsed);
+          var hrsLeft = Math.floor(minLeft / 60);
+          var minsLeft = minLeft % 60;
+          phaseText = 'Fading' + (hrsLeft > 0 ? ' — ' + hrsLeft + 'h ' + minsLeft + 'm left' : ' — ' + minsLeft + 'm left');
+        } else {
+          phase = 'done'; phaseColor = 'var(--dim)';
+          phaseText = 'Worn off';
+        }
+        tFill.style.background = phaseColor;
+        tBar.appendChild(tFill);
+        var tRow = document.createElement('div');
+        tRow.className = 'dex-timer-row';
+        var tLabel = document.createElement('div');
+        tLabel.className = 'dex-timer-label';
+        tLabel.style.color = phaseColor;
+        tLabel.textContent = phaseText;
+        var tEta = document.createElement('div');
+        tEta.className = 'dex-timer-eta';
+        var wearOff = new Date(entry.ts + pk.totalMin * 60000);
+        tEta.textContent = 'wears off ~' + wearOff.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        tRow.appendChild(tLabel);
+        tRow.appendChild(tEta);
+        timer.appendChild(tBar);
+        timer.appendChild(tRow);
+        dexList.appendChild(timer);
+      }
     });
   }
   dexCard.appendChild(dexList);
@@ -666,6 +1154,217 @@ function render() {
   dexBtn.addEventListener('click', showDoseModal);
   dexCard.appendChild(dexBtn);
   app.appendChild(dexCard);
+
+  // Caffeine tracker
+  var cafCard = document.createElement('div');
+  cafCard.className = 'caf-tracker';
+  var cafHeader = document.createElement('div');
+  cafHeader.className = 'caf-tracker-header';
+  var cafTitle = document.createElement('div');
+  cafTitle.className = 'caf-tracker-title';
+  cafTitle.textContent = 'Caffeine today';
+  var cafEntries = getCafLog();
+  var cafTotalMg = cafEntries.reduce(function(s, e) { return s + parseFloat(e.mg || 0); }, 0);
+  var cafTotal = document.createElement('div');
+  cafTotal.className = 'caf-tracker-total';
+  cafTotal.textContent = cafTotalMg > 0 ? cafTotalMg + ' mg total' : '';
+  cafHeader.appendChild(cafTitle); cafHeader.appendChild(cafTotal);
+  cafCard.appendChild(cafHeader);
+  var cafList = document.createElement('div');
+  if (cafEntries.length === 0) {
+    var cafEmpty = document.createElement('div');
+    cafEmpty.className = 'dex-empty';
+    cafEmpty.textContent = 'No caffeine logged';
+    cafList.appendChild(cafEmpty);
+  } else {
+    cafEntries.forEach(function(entry) {
+      var row = document.createElement('div');
+      row.className = 'caf-log-item';
+      var ct = document.createElement('div');
+      ct.className = 'caf-log-time'; ct.textContent = entry.time;
+      var ci = document.createElement('div');
+      ci.className = 'caf-log-info'; ci.textContent = entry.mg + ' mg';
+      var cb = document.createElement('div');
+      cb.className = 'caf-log-badge'; cb.textContent = entry.type;
+      var cx = document.createElement('button');
+      cx.className = 'caf-log-x'; cx.textContent = '\u00d7';
+      cx.addEventListener('click', (function(ts) { return function() { removeCafDose(ts); }; })(entry.ts));
+      row.appendChild(ct); row.appendChild(ci); row.appendChild(cb); row.appendChild(cx);
+      cafList.appendChild(row);
+      // Caffeine timer
+      var cafElapsed = (Date.now() - entry.ts) / 60000;
+      if (cafElapsed < CAF_EFFECTIVE_MIN * 1.1) {
+        var cafTimer = document.createElement('div');
+        cafTimer.className = 'caf-timer';
+        var cafBar = document.createElement('div');
+        cafBar.className = 'caf-timer-bar';
+        var cafFill = document.createElement('div');
+        cafFill.className = 'caf-timer-fill';
+        var cafRemaining = Math.max(0, 1 - cafElapsed / CAF_EFFECTIVE_MIN);
+        cafFill.style.width = (cafRemaining * 100) + '%';
+        cafBar.appendChild(cafFill);
+        var cafLbl = document.createElement('div');
+        cafLbl.className = 'caf-timer-label';
+        if (cafElapsed < CAF_EFFECTIVE_MIN) {
+          var cafMinLeft = Math.ceil(CAF_EFFECTIVE_MIN - cafElapsed);
+          var cafH = Math.floor(cafMinLeft / 60), cafM = cafMinLeft % 60;
+          cafLbl.textContent = 'Active — ' + (cafH > 0 ? cafH + 'h ' : '') + cafM + 'm remaining';
+        } else {
+          cafLbl.textContent = 'Worn off';
+        }
+        cafTimer.appendChild(cafBar); cafTimer.appendChild(cafLbl);
+        cafList.appendChild(cafTimer);
+      }
+    });
+  }
+  cafCard.appendChild(cafList);
+  var cafBtn = document.createElement('button');
+  cafBtn.className = 'caf-log-btn';
+  cafBtn.textContent = '+ log caffeine';
+  cafBtn.addEventListener('click', showCafModal);
+  cafCard.appendChild(cafBtn);
+  app.appendChild(cafCard);
+
+  // Food log
+  var foodCard = document.createElement('div');
+  foodCard.className = 'food-log';
+  var foodHeader = document.createElement('div');
+  foodHeader.className = 'food-log-header';
+  var foodTitle = document.createElement('div');
+  foodTitle.className = 'food-log-title';
+  foodTitle.textContent = 'Food log';
+  foodHeader.appendChild(foodTitle);
+  foodCard.appendChild(foodHeader);
+  var foodEntries = getFoodLog();
+  if (foodEntries.length > 0) {
+    foodEntries.slice().reverse().forEach(function(entry) {
+      var fe = document.createElement('div');
+      fe.className = 'food-entry';
+      if (entry.photo) {
+        var thumb = document.createElement('img');
+        thumb.className = 'food-thumb';
+        thumb.src = entry.photo;
+        thumb.alt = '';
+        fe.appendChild(thumb);
+      }
+      var body = document.createElement('div');
+      body.className = 'food-entry-body';
+      var desc = document.createElement('div');
+      desc.className = 'food-entry-desc';
+      desc.textContent = entry.desc;
+      var meta = document.createElement('div');
+      meta.className = 'food-entry-meta';
+      meta.textContent = entry.time;
+      body.appendChild(desc); body.appendChild(meta);
+      if (entry.categories && entry.categories.length > 0) {
+        var cats = document.createElement('div');
+        cats.className = 'food-cats';
+        entry.categories.forEach(function(c) {
+          var pill = document.createElement('span');
+          pill.className = 'food-cat-pill';
+          pill.textContent = c;
+          cats.appendChild(pill);
+        });
+        body.appendChild(cats);
+      }
+      fe.appendChild(body);
+      var fx = document.createElement('button');
+      fx.className = 'food-entry-x';
+      fx.textContent = '\u00d7';
+      fx.addEventListener('click', (function(ts) { return function() { removeFoodEntry(ts); }; })(entry.ts));
+      fe.appendChild(fx);
+      foodCard.appendChild(fe);
+    });
+  }
+  // Nutrient coverage summary
+  var coveredCats = {};
+  foodEntries.forEach(function(f) { (f.categories || []).forEach(function(c) { coveredCats[c] = true; }); });
+  var missingCats = FOOD_CATEGORIES.filter(function(c) { return !coveredCats[c]; });
+  if (foodEntries.length > 0) {
+    var summary = document.createElement('div');
+    summary.className = 'food-summary';
+    var sumTitle = document.createElement('div');
+    sumTitle.className = 'food-summary-title';
+    sumTitle.textContent = 'Nutrient coverage';
+    summary.appendChild(sumTitle);
+    var sumGrid = document.createElement('div');
+    sumGrid.className = 'food-summary-grid';
+    FOOD_CATEGORIES.forEach(function(cat) {
+      var item = document.createElement('div');
+      item.className = 'food-summary-item' + (coveredCats[cat] ? ' covered' : '');
+      item.textContent = (coveredCats[cat] ? '\u2713 ' : '') + cat;
+      sumGrid.appendChild(item);
+    });
+    summary.appendChild(sumGrid);
+    // Evening recommendation
+    if (new Date().getHours() >= 16 && missingCats.length > 0) {
+      var rec = document.createElement('div');
+      rec.className = 'food-rec';
+      var top3 = missingCats.slice(0, 3);
+      var suggests = top3.map(function(c) { return NUTRIENT_MAP[c] ? NUTRIENT_MAP[c].suggest : c; });
+      rec.textContent = 'Missing nutrients — try: ' + suggests.join(' · ');
+      summary.appendChild(rec);
+    }
+    foodCard.appendChild(summary);
+  }
+  var foodBtn = document.createElement('button');
+  foodBtn.className = 'food-add-btn';
+  foodBtn.textContent = '+ log meal';
+  foodBtn.addEventListener('click', showFoodModal);
+  foodCard.appendChild(foodBtn);
+  app.appendChild(foodCard);
+
+  // Recovery protocol
+  var recovery = getRecovery();
+  if (recovery && recovery.startedAt && new Date(recovery.startedAt).toDateString() === new Date().toDateString()) {
+    var recCard = document.createElement('div');
+    recCard.className = 'recovery-active';
+    var recHeader = document.createElement('div');
+    recHeader.className = 'recovery-header';
+    var recTitle = document.createElement('div');
+    recTitle.className = 'recovery-title';
+    recTitle.textContent = 'Recovery Protocol';
+    var recDone = recovery.items.filter(function(i) { return i.checked; }).length;
+    var recProg = document.createElement('div');
+    recProg.className = 'recovery-progress';
+    recProg.textContent = recDone + '/' + recovery.items.length;
+    recHeader.appendChild(recTitle); recHeader.appendChild(recProg);
+    recCard.appendChild(recHeader);
+    recovery.items.forEach(function(item, idx) {
+      var ri = document.createElement('div');
+      ri.className = 'recovery-item' + (item.checked ? ' done' : '');
+      ri.addEventListener('click', (function(i) { return function() { toggleRecoveryItem(i); }; })(idx));
+      var rc = document.createElement('div');
+      rc.className = 'recovery-check';
+      if (item.checked) {
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '10'); svg.setAttribute('height', '10');
+        svg.setAttribute('viewBox', '0 0 12 12'); svg.setAttribute('fill', 'none');
+        var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M2.5 6L5 8.5L9.5 3.5');
+        path.setAttribute('stroke', '#ffffff'); path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(path); rc.appendChild(svg);
+      }
+      var rt = document.createElement('div');
+      rt.className = 'recovery-item-text';
+      rt.textContent = item.text;
+      ri.appendChild(rc); ri.appendChild(rt);
+      recCard.appendChild(ri);
+    });
+    var dismiss = document.createElement('button');
+    dismiss.className = 'recovery-dismiss';
+    dismiss.textContent = 'dismiss';
+    dismiss.addEventListener('click', dismissRecovery);
+    recCard.appendChild(dismiss);
+    app.appendChild(recCard);
+  } else {
+    var recBtn = document.createElement('button');
+    recBtn.className = 'recovery-btn';
+    recBtn.textContent = 'Recovery Protocol';
+    recBtn.addEventListener('click', showRecoveryModal);
+    app.appendChild(recBtn);
+  }
 
   // Phases
   for (const phase of PHASES) {
@@ -939,6 +1638,9 @@ fetchSunTimes();
 
 loadState();
 render();
+
+// Auto-refresh every 60s for timers
+setInterval(render, 60000);
 
 // Register service worker for offline support
 if ('serviceWorker' in navigator) {
