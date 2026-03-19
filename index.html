@@ -10,74 +10,83 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stack">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0d0d0d">
+<meta name="theme-color" content="#f5f4f0">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0d0d0d;--card:#161614;--border:#2a2825;--text:#e8e6e1;--muted:#6b6965;--dim:#4a4843;--accent-warm:#d4845a;--accent-gold:#bfa85a;--accent-green:#5abf7a;--accent-blue:#5a8bbf;--accent-purple:#8b5abf;--accent-pink:#bf5a7a;--done-bg:#1a2a1f;--done-text:#5abf7a}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;padding:0;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
-.app{max-width:480px;margin:0 auto;padding:1rem 1rem 6rem;padding-top:max(1rem, env(safe-area-inset-top))}
-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.5rem;padding-top:0.5rem}
-h1{font-size:1.3rem;font-weight:700;letter-spacing:-0.03em}
-.reset-btn{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);background:none;border:1px solid var(--border);padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em}
-.reset-btn:active{background:var(--border)}
-.status-bar{display:flex;gap:6px;margin-bottom:1.5rem;align-items:center}
-.progress-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
-.progress-fill{height:100%;background:var(--accent-green);border-radius:2px;transition:width 0.4s ease}
-.progress-label{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);min-width:40px;text-align:right}
-.phase{margin-bottom:1.25rem}
-.phase-header{display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;padding:0 0.25rem}
-.phase-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.phase-name{font-size:0.8rem;font-weight:700;letter-spacing:-0.01em}
-.phase-context{font-size:0.6rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-left:auto}
-.phase-done .phase-name{color:var(--muted);text-decoration:line-through}
-.item{display:flex;align-items:center;gap:10px;padding:0.65rem 0.75rem;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;cursor:pointer;transition:all 0.15s;user-select:none;-webkit-user-select:none}
-.item:active{transform:scale(0.98)}
-.item.taken{background:var(--done-bg);border-color:#1a3322}
-.check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+:root{--bg:#f7f7f5;--card:#ffffff;--border:#ebebeb;--text:#111111;--sub:#444444;--muted:#999999;--dim:#bbbbbb;--accent-warm:#d97041;--accent-gold:#c49a2c;--accent-green:#22a558;--accent-blue:#3b7dd8;--accent-purple:#7c4dca;--accent-pink:#d14472;--done-bg:#f0faf4;--done-border:#c8e6d4;--done-text:#1a8a47;--shadow:0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.03);--shadow-lg:0 4px 12px rgba(0,0,0,0.06);--radius:10px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;padding:0;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+.sky-scene{position:fixed;top:0;left:0;right:0;height:200px;pointer-events:none;z-index:0;transition:background 60s linear}
+.sky-body{position:absolute;width:24px;height:24px;border-radius:50%;transition:left 60s linear,top 60s linear}
+.sky-sun{background:radial-gradient(circle,#ffe599 20%,#f0b860 100%);box-shadow:0 0 20px 8px rgba(255,229,153,0.3)}
+.sky-moon{background:radial-gradient(circle at 35% 35%,#f0f0ee 0%,#d5d3ce 100%);box-shadow:0 0 10px 3px rgba(200,200,195,0.15)}
+.sky-stars{position:absolute;inset:0;transition:opacity 60s linear}
+.sky-star{position:absolute;width:1.5px;height:1.5px;background:#ffffff;border-radius:50%}
+.sky-fade{position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(to bottom,transparent,var(--bg))}
+.app{position:relative;z-index:1;max-width:440px;margin:0 auto;padding:20px 20px 80px;padding-top:max(20px, env(safe-area-inset-top))}
+header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px}
+h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
+.date-line{font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:var(--muted);margin-bottom:16px;letter-spacing:0.02em;text-transform:uppercase}
+.reset-btn{font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:var(--muted);background:none;border:1px solid var(--border);padding:5px 10px;border-radius:6px;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em;transition:all 0.15s}
+.reset-btn:active{background:#f0f0ee}
+.status-bar{display:flex;gap:8px;margin-bottom:24px;align-items:center}
+.progress-track{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent-green);border-radius:2px;transition:width 0.5s cubic-bezier(.4,0,.2,1)}
+.progress-label{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--muted);min-width:36px;text-align:right}
+.phase{margin-bottom:20px}
+.phase-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:0 2px}
+.phase-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.phase-name{font-size:0.72rem;font-weight:600;letter-spacing:-0.01em;color:var(--sub)}
+.phase-context{font-size:0.55rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-left:auto}
+.phase-done .phase-name{color:var(--dim);text-decoration:line-through}
+.item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:5px;cursor:pointer;transition:all 0.15s;user-select:none;-webkit-user-select:none;box-shadow:var(--shadow)}
+.item:active{transform:scale(0.985);box-shadow:none}
+.item.taken{background:var(--done-bg);border-color:var(--done-border);box-shadow:none}
+.check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--dim);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
 .item.taken .check{border-color:var(--accent-green);background:var(--accent-green)}
 .check svg{opacity:0;transition:opacity 0.15s}
 .item.taken .check svg{opacity:1}
 .item-info{flex:1;min-width:0}
-.item-name{font-size:0.82rem;color:var(--text)}
-.item.taken .item-name{color:var(--done-text)}
-.item-dose{font-size:0.65rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
-.item-time{font-size:0.6rem;color:var(--dim);font-family:'JetBrains Mono',monospace;min-width:42px;text-align:right}
+.item-name{font-size:0.8rem;font-weight:500;color:var(--text)}
+.item.taken .item-name{color:var(--done-text);font-weight:400}
+.item-dose{font-size:0.6rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:1px}
+.item-time{font-size:0.55rem;color:var(--dim);font-family:'JetBrains Mono',monospace;min-width:42px;text-align:right}
 .item.taken .item-time{color:var(--done-text)}
-.tag{font-size:0.5rem;font-family:'JetBrains Mono',monospace;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;margin-left:6px;vertical-align:middle}
-.tag-rx{background:#2a1f1a;color:#d4845a}
-.note-block{padding:0.5rem 0.75rem;margin-bottom:4px;border-left:2px solid var(--border);margin-left:0.75rem}
-.note-block p{font-size:0.7rem;color:var(--dim);line-height:1.5;font-style:italic}
-.footer-note{margin-top:2rem;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:8px}
-.footer-note h3{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem}
-.footer-note p{font-size:0.72rem;color:var(--dim);line-height:1.6}
-.dose-log{margin-top:4px;margin-bottom:4px}
-.dose-log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:0 0.25rem}
-.dose-log-title{font-size:0.65rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-pink)}
-.log-add-btn{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-pink);background:none;border:1px solid var(--accent-pink);padding:3px 8px;border-radius:4px;cursor:pointer;letter-spacing:0.03em}
-.log-add-btn:active{background:#2a1a22}
-.log-entry{display:flex;align-items:center;gap:8px;padding:0.5rem 0.75rem;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:3px}
-.log-entry-time{font-size:0.65rem;color:var(--accent-pink);font-family:'JetBrains Mono',monospace;min-width:52px}
-.log-entry-detail{font-size:0.75rem;color:var(--text);flex:1}
-.log-entry-type{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted);padding:1px 5px;border:1px solid var(--border);border-radius:3px}
-.log-entry-remove{font-size:0.6rem;color:var(--dim);background:none;border:none;cursor:pointer;padding:4px;font-family:'JetBrains Mono',monospace}
-.log-entry-remove:active{color:var(--accent-pink)}
-.log-empty{font-size:0.65rem;color:var(--dim);font-style:italic;padding:0.4rem 0.75rem}
-.dose-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;padding:1rem}
-.dose-modal{background:#1a1a18;border:1px solid var(--border);border-radius:12px;padding:1.25rem;width:100%;max-width:320px}
-.dose-modal h3{font-size:0.85rem;margin-bottom:1rem;color:var(--text)}
-.dose-modal label{display:block;font-size:0.65rem;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px}
-.dose-modal select,.dose-modal input{width:100%;padding:0.5rem;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;margin-bottom:0.75rem;-webkit-appearance:none;appearance:none}
-.dose-modal select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%236b6965' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.5rem center}
-.dose-modal-btns{display:flex;gap:8px;margin-top:0.5rem}
-.dose-modal-btns button{flex:1;padding:0.5rem;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:500;cursor:pointer;border:none}
-.modal-cancel{background:var(--border);color:var(--muted)}
-.modal-save{background:var(--accent-pink);color:#0d0d0d}
-.modal-cancel:active{background:#3a3835}
-.modal-save:active{background:#a64a68}
+.tag{font-size:0.45rem;font-family:'JetBrains Mono',monospace;padding:2px 5px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em;margin-left:6px;vertical-align:middle;font-weight:500}
+.tag-rx{background:#fef0e8;color:var(--accent-warm)}
+.note-block{padding:6px 12px;margin-top:2px;margin-bottom:4px;border-left:2px solid var(--border);margin-left:12px}
+.note-block p{font-size:0.65rem;color:var(--muted);line-height:1.6}
+.footer-note{margin-top:28px;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.footer-note h3{font-size:0.5rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;color:var(--dim);margin-bottom:8px}
+.footer-note p{font-size:0.68rem;color:var(--muted);line-height:1.7}
+.dose-log{margin-top:6px;margin-bottom:4px}
+.dose-log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:0 2px}
+.dose-log-title{font-size:0.55rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-pink);font-weight:500}
+.log-add-btn{font-family:'JetBrains Mono',monospace;font-size:0.55rem;color:var(--accent-pink);background:none;border:1px solid var(--accent-pink);padding:4px 10px;border-radius:6px;cursor:pointer;letter-spacing:0.03em;transition:all 0.15s}
+.log-add-btn:active{background:#fef0f3}
+.log-entry{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;box-shadow:var(--shadow)}
+.log-entry-time{font-size:0.6rem;color:var(--accent-pink);font-family:'JetBrains Mono',monospace;min-width:52px;font-weight:500}
+.log-entry-detail{font-size:0.75rem;color:var(--text);flex:1;font-weight:500}
+.log-entry-type{font-size:0.5rem;font-family:'JetBrains Mono',monospace;color:var(--muted);padding:2px 6px;border:1px solid var(--border);border-radius:4px}
+.log-entry-remove{font-size:0.65rem;color:var(--dim);background:none;border:none;cursor:pointer;padding:4px 6px;font-family:'JetBrains Mono',monospace;border-radius:4px;transition:all 0.15s}
+.log-entry-remove:active{color:var(--accent-pink);background:#fef0f3}
+.log-empty{font-size:0.6rem;color:var(--dim);padding:6px 14px}
+.dose-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.dose-modal{background:#ffffff;border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:320px;box-shadow:var(--shadow-lg)}
+.dose-modal h3{font-size:0.9rem;font-weight:600;margin-bottom:16px;color:var(--text)}
+.dose-modal label{display:block;font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px}
+.dose-modal select,.dose-modal input{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;margin-bottom:12px;-webkit-appearance:none;appearance:none;transition:border-color 0.15s}
+.dose-modal select:focus,.dose-modal input:focus{outline:none;border-color:var(--accent-pink)}
+.dose-modal select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%23999999' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.dose-modal-btns{display:flex;gap:8px;margin-top:4px}
+.dose-modal-btns button{flex:1;padding:10px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:600;cursor:pointer;border:none;transition:all 0.15s}
+.modal-cancel{background:var(--bg);color:var(--sub);border:1px solid var(--border)}
+.modal-cancel:active{background:#ebebeb}
+.modal-save{background:var(--accent-pink);color:#ffffff}
+.modal-save:active{background:#b83a5e}
 </style>
 </head>
 <body>
@@ -290,6 +299,13 @@ function render() {
   header.appendChild(resetBtn);
   app.appendChild(header);
 
+  // Date
+  const dateLine = document.createElement('div');
+  dateLine.className = 'date-line';
+  const now = new Date();
+  dateLine.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  app.appendChild(dateLine);
+
   // Status bar
   const statusBar = document.createElement('div');
   statusBar.className = 'status-bar';
@@ -343,7 +359,7 @@ function render() {
       svg.setAttribute('fill', 'none');
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', 'M2.5 6L5 8.5L9.5 3.5');
-      path.setAttribute('stroke', '#0d0d0d');
+      path.setAttribute('stroke', '#ffffff');
       path.setAttribute('stroke-width', '1.5');
       path.setAttribute('stroke-linecap', 'round');
       path.setAttribute('stroke-linejoin', 'round');
@@ -452,6 +468,182 @@ function render() {
   footer.appendChild(footerP);
   app.appendChild(footer);
 }
+// --- Sky scene: sun/moon synced to Toronto sunrise/sunset ---
+const TORONTO = { lat: 43.6532, lng: -79.3832 };
+let sunTimes = null;
+
+function fetchSunTimes() {
+  var cached = localStorage.getItem('stack_sun');
+  if (cached) {
+    try {
+      var p = JSON.parse(cached);
+      if (p._date === new Date().toDateString()) { sunTimes = p; initSky(); return; }
+    } catch(e) {}
+  }
+  // Fetch from sunrise-sunset.org (free, no key)
+  fetch('https://api.sunrise-sunset.org/json?lat=' + TORONTO.lat + '&lng=' + TORONTO.lng + '&formatted=0&date=today')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.status === 'OK') {
+        sunTimes = {
+          _date: new Date().toDateString(),
+          sunrise: new Date(data.results.sunrise).getTime(),
+          sunset: new Date(data.results.sunset).getTime(),
+          dawn: new Date(data.results.civil_twilight_begin).getTime(),
+          dusk: new Date(data.results.civil_twilight_end).getTime()
+        };
+        localStorage.setItem('stack_sun', JSON.stringify(sunTimes));
+      } else {
+        useFallbackTimes();
+      }
+      initSky();
+    })
+    .catch(function() { useFallbackTimes(); initSky(); });
+}
+
+function useFallbackTimes() {
+  // Approximate Toronto times
+  var d = new Date();
+  d.setHours(6,30,0,0); var dawn = d.getTime();
+  d.setHours(7,0,0,0); var rise = d.getTime();
+  d.setHours(18,30,0,0); var set = d.getTime();
+  d.setHours(19,0,0,0); var dusk = d.getTime();
+  sunTimes = { _date: new Date().toDateString(), sunrise: rise, sunset: set, dawn: dawn, dusk: dusk };
+}
+
+function getSkyState(now) {
+  if (!sunTimes) return { phase: 'night', progress: 0 };
+  var t = now || Date.now();
+  var dawn = sunTimes.dawn, rise = sunTimes.sunrise, set = sunTimes.sunset, dusk = sunTimes.dusk;
+  if (t < dawn) return { phase: 'night', progress: 0 };
+  if (t < rise) return { phase: 'dawn', progress: (t - dawn) / (rise - dawn) };
+  if (t < set) return { phase: 'day', progress: (t - rise) / (set - rise) };
+  if (t < dusk) return { phase: 'dusk', progress: (t - set) / (dusk - set) };
+  return { phase: 'night', progress: 1 };
+}
+
+function lerpColor(a, b, t) {
+  var ah = parseInt(a.slice(1), 16), bh = parseInt(b.slice(1), 16);
+  var ar = (ah >> 16) & 0xff, ag = (ah >> 8) & 0xff, ab = ah & 0xff;
+  var br = (bh >> 16) & 0xff, bg = (bh >> 8) & 0xff, bb = bh & 0xff;
+  var rr = Math.round(ar + (br - ar) * t), rg = Math.round(ag + (bg - ag) * t), rb = Math.round(ab + (bb - ab) * t);
+  return 'rgb(' + rr + ',' + rg + ',' + rb + ')';
+}
+
+var skyEl = null, sunEl = null, moonEl = null, starsEl = null;
+
+function initSky() {
+  if (skyEl) { updateSky(); return; }
+  skyEl = document.createElement('div');
+  skyEl.className = 'sky-scene';
+
+  starsEl = document.createElement('div');
+  starsEl.className = 'sky-stars';
+  // Scatter stars
+  for (var i = 0; i < 40; i++) {
+    var star = document.createElement('div');
+    star.className = 'sky-star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 70 + '%';
+    star.style.opacity = (0.3 + Math.random() * 0.7).toFixed(2);
+    if (Math.random() > 0.7) { star.style.width = '3px'; star.style.height = '3px'; }
+    starsEl.appendChild(star);
+  }
+  skyEl.appendChild(starsEl);
+
+  sunEl = document.createElement('div');
+  sunEl.className = 'sky-body sky-sun';
+  skyEl.appendChild(sunEl);
+
+  moonEl = document.createElement('div');
+  moonEl.className = 'sky-body sky-moon';
+  skyEl.appendChild(moonEl);
+
+  var fade = document.createElement('div');
+  fade.className = 'sky-fade';
+  skyEl.appendChild(fade);
+
+  document.body.insertBefore(skyEl, document.body.firstChild);
+  updateSky();
+  setInterval(updateSky, 60000);
+}
+
+function updateSky() {
+  if (!skyEl || !sunTimes) return;
+  var sky = getSkyState();
+  var phase = sky.phase, p = sky.progress;
+
+  // Sky gradient colors
+  var topColor, botColor, starOpacity;
+  if (phase === 'night') {
+    topColor = '#0f1528'; botColor = '#1a1a2e'; starOpacity = 0.9;
+  } else if (phase === 'dawn') {
+    topColor = lerpColor('#0f1528', '#7ab0d4', p);
+    botColor = lerpColor('#1a1a2e', '#f0c08a', p);
+    starOpacity = 1 - p;
+  } else if (phase === 'day') {
+    if (p < 0.15) {
+      topColor = lerpColor('#7ab0d4', '#88c4e8', p / 0.15);
+      botColor = lerpColor('#f0c08a', '#d0e4f0', p / 0.15);
+    } else if (p > 0.85) {
+      var dp = (p - 0.85) / 0.15;
+      topColor = lerpColor('#88c4e8', '#7aa0c8', dp);
+      botColor = lerpColor('#d0e4f0', '#f0b878', dp);
+    } else {
+      topColor = '#88c4e8'; botColor = '#d0e4f0';
+    }
+    starOpacity = 0;
+  } else { // dusk
+    topColor = lerpColor('#7aa0c8', '#0f1528', p);
+    botColor = lerpColor('#f0b878', '#1a1a2e', p);
+    starOpacity = p;
+  }
+
+  skyEl.style.background = 'linear-gradient(to bottom,' + topColor + ',' + botColor + ')';
+  starsEl.style.opacity = starOpacity;
+
+  // Sun arc (visible during dawn/day/dusk)
+  var sunVisible = (phase === 'dawn' || phase === 'day' || phase === 'dusk');
+  sunEl.style.display = sunVisible ? 'block' : 'none';
+  if (sunVisible) {
+    var sunP;
+    if (phase === 'dawn') sunP = p * 0.08;
+    else if (phase === 'day') sunP = 0.08 + p * 0.84;
+    else sunP = 0.92 + p * 0.08;
+    var sunX = sunP * 100;
+    var sunArc = Math.sin(sunP * Math.PI);
+    var sunY = 180 - sunArc * 150;
+    sunEl.style.left = sunX + '%';
+    sunEl.style.top = sunY + 'px';
+  }
+
+  // Moon arc (visible at night and twilight edges)
+  var moonVisible = (phase === 'night' || phase === 'dawn' || phase === 'dusk');
+  moonEl.style.display = moonVisible ? 'block' : 'none';
+  if (moonVisible) {
+    var now = Date.now();
+    var midnight = new Date(); midnight.setHours(0,0,0,0);
+    var nextMid = new Date(); nextMid.setHours(24,0,0,0);
+    // Moon traverses sky roughly opposite to sun
+    var moonP;
+    if (now < sunTimes.sunrise) {
+      moonP = 0.3 + 0.4 * (1 - (sunTimes.sunrise - now) / (sunTimes.sunrise - midnight.getTime()));
+    } else if (now > sunTimes.sunset) {
+      moonP = 0.1 + 0.5 * ((now - sunTimes.sunset) / (nextMid.getTime() - sunTimes.sunset));
+    } else {
+      moonP = 0.05;
+    }
+    moonP = Math.max(0.05, Math.min(0.95, moonP));
+    var moonX = moonP * 100;
+    var moonArc = Math.sin(moonP * Math.PI);
+    var moonY = 170 - moonArc * 130;
+    moonEl.style.left = moonX + '%';
+    moonEl.style.top = moonY + 'px';
+  }
+}
+
+fetchSunTimes();
+
 loadState();
 render();
 
