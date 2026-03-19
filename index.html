@@ -219,6 +219,35 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .quick-log-item-name{font-size:0.78rem;font-weight:500}
 .quick-log-item-dose{font-size:0.58rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
 .quick-log-item-phase{font-size:0.48rem;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-left:auto}
+/* Mood log */
+.mood-tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
+.mood-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mood-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-blue);font-weight:500}
+.mood-count{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.mood-quick{display:flex;justify-content:space-between;gap:4px;margin-bottom:10px}
+.mood-quick-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:1px solid var(--border);border-radius:10px;background:var(--card);cursor:pointer;transition:all 0.15s}
+.mood-quick-btn:active{transform:scale(0.95)}
+.mood-quick-btn .mq-emoji{font-size:1.3rem}
+.mood-quick-btn .mq-label{font-size:0.42rem;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em}
+.mood-entry{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.mood-entry:last-of-type{border-bottom:none}
+.mood-entry-time{font-size:0.6rem;color:var(--accent-blue);font-family:'JetBrains Mono',monospace;min-width:50px;font-weight:500;padding-top:2px}
+.mood-entry-body{flex:1;min-width:0}
+.mood-entry-emojis{font-size:1rem;margin-bottom:2px}
+.mood-entry-labels{font-size:0.55rem;color:var(--sub);font-family:'JetBrains Mono',monospace}
+.mood-entry-ctx{font-size:0.48rem;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.mood-entry-note{font-size:0.6rem;color:var(--sub);font-style:italic;margin-top:2px}
+.mood-entry-x{font-size:0.6rem;color:var(--dim);background:none;border:none;cursor:pointer;padding:2px 6px;font-family:'JetBrains Mono',monospace}
+.mood-log-btn{width:100%;padding:8px;border:1px dashed var(--accent-blue);background:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-blue);cursor:pointer;letter-spacing:0.03em;transition:all 0.15s}
+.mood-log-btn:active{background:#f0f5ff}
+.mood-modal-row{margin-bottom:12px}
+.mood-modal-row label{display:block;font-size:0.65rem;color:var(--sub);margin-bottom:4px}
+.mood-emoji-picker{display:flex;gap:4px}
+.mood-emoji-opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);cursor:pointer;transition:all 0.15s}
+.mood-emoji-opt .me-emoji{font-size:1.4rem}
+.mood-emoji-opt .me-label{font-size:0.42rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.mood-emoji-opt.selected{border-color:var(--accent-blue);background:#f0f5ff}
+.mood-emoji-opt.selected .me-label{color:var(--accent-blue);font-weight:600}
 .caf-timer-label{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
 /* Food log */
 .food-log{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
@@ -567,6 +596,48 @@ function buildRecoveryContext(timeWindow) {
 }
 var waterGoalGlobal = 2500; // updated in render
 
+// --- Mood / energy log ---
+var MOOD_OPTIONS = [
+  { emoji: '\ud83d\ude29', label: 'Awful', value: 1 },
+  { emoji: '\ud83d\ude1e', label: 'Low', value: 2 },
+  { emoji: '\ud83d\ude10', label: 'Meh', value: 3 },
+  { emoji: '\ud83d\ude42', label: 'Good', value: 4 },
+  { emoji: '\ud83d\ude04', label: 'Great', value: 5 }
+];
+var ENERGY_OPTIONS = [
+  { emoji: '\ud83e\udea6', label: 'Dead', value: 1 },
+  { emoji: '\ud83e\udd71', label: 'Tired', value: 2 },
+  { emoji: '\ud83d\ude36', label: 'Okay', value: 3 },
+  { emoji: '\u26a1', label: 'Wired', value: 4 },
+  { emoji: '\ud83d\ude80', label: 'Peak', value: 5 }
+];
+var FOCUS_OPTIONS = [
+  { emoji: '\ud83c\udf2b\ufe0f', label: 'Fog', value: 1 },
+  { emoji: '\ud83d\ude35\u200d\ud83d\udcab', label: 'Scattered', value: 2 },
+  { emoji: '\ud83e\udde0', label: 'Normal', value: 3 },
+  { emoji: '\ud83c\udfaf', label: 'Dialed', value: 4 },
+  { emoji: '\ud83d\udd25', label: 'Flow', value: 5 }
+];
+function getMoodLog() { return state._moodLog || []; }
+function addMoodEntry(mood, energy, focus, note) {
+  if (!state._moodLog) state._moodLog = [];
+  var ts = Date.now();
+  var timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // Capture context: dex active? caffeine level? sleep?
+  var dexLog = state._dexLog || [];
+  var dexActive = dexLog.some(function(d) { return (Date.now() - d.ts) < (DEX_PK[d.type] || DEX_PK.XR).totalMin * 60000; });
+  var cafLog = state._cafLog || [];
+  var cafTotal = cafLog.reduce(function(s, e) { return s + parseFloat(e.mg || 0); }, 0);
+  var ctx = { dexActive: dexActive, cafMg: cafTotal, sleep: getSleep() };
+  state._moodLog.push({ ts: ts, time: timeStr, mood: mood, energy: energy, focus: focus, note: note || '', ctx: ctx });
+  saveState(); render();
+}
+function removeMoodEntry(ts) {
+  if (!state._moodLog) return;
+  state._moodLog = state._moodLog.filter(function(e) { return e.ts !== ts; });
+  saveState(); render();
+}
+
 // --- Notification system ---
 var focusTimers = [];
 var FOCUS_SEQUENCES = {
@@ -646,16 +717,23 @@ function requestNotifPermission() {
 }
 
 function sendNotif(title, body) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  try {
-    new Notification(title, { body: body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' });
-  } catch(e) {
-    // SW notification fallback for iOS
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then(function(reg) {
-        reg.showNotification(title, { body: body, icon: 'icons/icon-192.png' });
+  if (Notification.permission !== 'granted') return;
+  // Always prefer SW notifications (required for iOS PWA)
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.ready.then(function(reg) {
+      reg.showNotification(title, {
+        body: body,
+        icon: 'icons/icon-192.png',
+        badge: 'icons/icon-192.png',
+        tag: title.replace(/\s+/g, '-').toLowerCase(),
+        renotify: true
       });
-    }
+    }).catch(function() {
+      // Fallback to regular Notification API
+      try { new Notification(title, { body: body, icon: 'icons/icon-192.png' }); } catch(e) {}
+    });
+  } else {
+    try { new Notification(title, { body: body, icon: 'icons/icon-192.png' }); } catch(e) {}
   }
 }
 
@@ -939,6 +1017,84 @@ function showBfrbModal() {
   document.body.appendChild(overlay);
 }
 
+function showMoodModal() {
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal';
+  modal.style.maxWidth = '360px';
+  var h3 = document.createElement('h3');
+  h3.textContent = 'Check in';
+
+  var selectedMood = 0, selectedEnergy = 0, selectedFocus = 0;
+
+  function makePickerRow(label, options, onSelect) {
+    var row = document.createElement('div');
+    row.className = 'mood-modal-row';
+    var lbl = document.createElement('label');
+    lbl.textContent = label;
+    row.appendChild(lbl);
+    var picker = document.createElement('div');
+    picker.className = 'mood-emoji-picker';
+    options.forEach(function(opt) {
+      var btn = document.createElement('div');
+      btn.className = 'mood-emoji-opt';
+      var em = document.createElement('div');
+      em.className = 'me-emoji'; em.textContent = opt.emoji;
+      var lb = document.createElement('div');
+      lb.className = 'me-label'; lb.textContent = opt.label;
+      btn.appendChild(em); btn.appendChild(lb);
+      btn.addEventListener('click', function() {
+        picker.querySelectorAll('.mood-emoji-opt').forEach(function(b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        onSelect(opt.value);
+      });
+      picker.appendChild(btn);
+    });
+    row.appendChild(picker);
+    return row;
+  }
+
+  var moodRow = makePickerRow('Mood', MOOD_OPTIONS, function(v) { selectedMood = v; });
+  var energyRow = makePickerRow('Energy', ENERGY_OPTIONS, function(v) { selectedEnergy = v; });
+  var focusRow = makePickerRow('Focus', FOCUS_OPTIONS, function(v) { selectedFocus = v; });
+
+  var noteLabel = document.createElement('label');
+  noteLabel.textContent = 'Note (optional)';
+  noteLabel.style.cssText = 'font-size:0.65rem;color:var(--sub);display:block;margin-top:8px';
+  var noteInput = document.createElement('input');
+  noteInput.type = 'text';
+  noteInput.placeholder = 'How are you feeling?';
+
+  var btns = document.createElement('div');
+  btns.className = 'dose-modal-btns';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'modal-cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'modal-save';
+  saveBtn.style.background = 'var(--accent-blue)';
+  saveBtn.textContent = 'Log check-in';
+  saveBtn.addEventListener('click', function() {
+    if (!selectedMood || !selectedEnergy || !selectedFocus) return;
+    addMoodEntry(selectedMood, selectedEnergy, selectedFocus, noteInput.value.trim());
+    overlay.remove();
+  });
+  btns.appendChild(cancelBtn); btns.appendChild(saveBtn);
+
+  modal.appendChild(h3);
+  modal.appendChild(moodRow);
+  modal.appendChild(energyRow);
+  modal.appendChild(focusRow);
+  modal.appendChild(noteLabel);
+  modal.appendChild(noteInput);
+  modal.appendChild(btns);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
 function showFoodModal() {
   var overlay = document.createElement('div');
   overlay.className = 'dose-modal-overlay';
@@ -1097,6 +1253,22 @@ function render() {
   header.appendChild(h1);
   header.appendChild(headerBtns);
   app.appendChild(header);
+
+  // Notification permission banner
+  if ('Notification' in window && Notification.permission === 'default') {
+    var notifBanner = document.createElement('div');
+    notifBanner.style.cssText = 'padding:10px 14px;background:#f0f5ff;border:1px solid var(--accent-blue);border-radius:8px;margin-bottom:12px;display:flex;align-items:center;gap:10px;cursor:pointer';
+    notifBanner.innerHTML = '<div style="font-size:1.1rem">\ud83d\udd14</div><div style="flex:1"><div style="font-size:0.72rem;font-weight:600;color:var(--text)">Enable notifications</div><div style="font-size:0.58rem;color:var(--sub)">Get focus prompts when Dex kicks in</div></div>';
+    notifBanner.addEventListener('click', function() {
+      requestNotifPermission().then(function(perm) {
+        if (perm === 'granted') {
+          notifBanner.remove();
+          sendNotif('Notifications enabled', 'You\'ll get focus prompts when you log a Dex dose.');
+        }
+      });
+    });
+    app.appendChild(notifBanner);
+  }
 
   // Date + sleep info
   const dateLine = document.createElement('div');
@@ -1552,6 +1724,98 @@ function render() {
   bfrbCard.appendChild(panicBtn);
 
   app.appendChild(bfrbCard);
+
+  // Mood / energy / focus tracker
+  var moodCard = document.createElement('div');
+  moodCard.className = 'mood-tracker';
+  var moodHeader = document.createElement('div');
+  moodHeader.className = 'mood-header';
+  var moodTitle = document.createElement('div');
+  moodTitle.className = 'mood-title';
+  moodTitle.textContent = 'Mood · Energy · Focus';
+  var moodEntries = getMoodLog();
+  var moodCountEl = document.createElement('div');
+  moodCountEl.className = 'mood-count';
+  moodCountEl.textContent = moodEntries.length > 0 ? moodEntries.length + ' check-in' + (moodEntries.length !== 1 ? 's' : '') : '';
+  moodHeader.appendChild(moodTitle); moodHeader.appendChild(moodCountEl);
+  moodCard.appendChild(moodHeader);
+
+  // Quick mood buttons (tap emoji = instant log with defaults)
+  var moodQuick = document.createElement('div');
+  moodQuick.className = 'mood-quick';
+  MOOD_OPTIONS.forEach(function(opt) {
+    var btn = document.createElement('div');
+    btn.className = 'mood-quick-btn';
+    var em = document.createElement('div');
+    em.className = 'mq-emoji'; em.textContent = opt.emoji;
+    var lb = document.createElement('div');
+    lb.className = 'mq-label'; lb.textContent = opt.label;
+    btn.appendChild(em); btn.appendChild(lb);
+    btn.addEventListener('click', function() {
+      addMoodEntry(opt.value, opt.value, opt.value, '');
+    });
+    moodQuick.appendChild(btn);
+  });
+  moodCard.appendChild(moodQuick);
+
+  // Entries
+  var moodList = document.createElement('div');
+  if (moodEntries.length === 0) {
+    var moodEmpty = document.createElement('div');
+    moodEmpty.className = 'dex-empty';
+    moodEmpty.textContent = 'No check-ins yet';
+    moodList.appendChild(moodEmpty);
+  } else {
+    moodEntries.slice().reverse().forEach(function(entry) {
+      var row = document.createElement('div');
+      row.className = 'mood-entry';
+      var timeEl = document.createElement('div');
+      timeEl.className = 'mood-entry-time'; timeEl.textContent = entry.time;
+      var bodyEl = document.createElement('div');
+      bodyEl.className = 'mood-entry-body';
+      var emojis = document.createElement('div');
+      emojis.className = 'mood-entry-emojis';
+      var moodEmoji = MOOD_OPTIONS[entry.mood - 1] ? MOOD_OPTIONS[entry.mood - 1].emoji : '';
+      var energyEmoji = ENERGY_OPTIONS[entry.energy - 1] ? ENERGY_OPTIONS[entry.energy - 1].emoji : '';
+      var focusEmoji = FOCUS_OPTIONS[entry.focus - 1] ? FOCUS_OPTIONS[entry.focus - 1].emoji : '';
+      emojis.textContent = moodEmoji + ' ' + energyEmoji + ' ' + focusEmoji;
+      var labels = document.createElement('div');
+      labels.className = 'mood-entry-labels';
+      var moodLabel = MOOD_OPTIONS[entry.mood - 1] ? MOOD_OPTIONS[entry.mood - 1].label : '';
+      var energyLabel = ENERGY_OPTIONS[entry.energy - 1] ? ENERGY_OPTIONS[entry.energy - 1].label : '';
+      var focusLabel = FOCUS_OPTIONS[entry.focus - 1] ? FOCUS_OPTIONS[entry.focus - 1].label : '';
+      labels.textContent = moodLabel + ' · ' + energyLabel + ' · ' + focusLabel;
+      bodyEl.appendChild(emojis); bodyEl.appendChild(labels);
+      if (entry.ctx) {
+        var ctxEl = document.createElement('div');
+        ctxEl.className = 'mood-entry-ctx';
+        var ctxParts = [];
+        if (entry.ctx.dexActive) ctxParts.push('dex active');
+        if (entry.ctx.cafMg > 0) ctxParts.push(entry.ctx.cafMg + 'mg caf');
+        if (entry.ctx.sleep > 0) ctxParts.push(entry.ctx.sleep + 'hr sleep');
+        if (ctxParts.length) ctxEl.textContent = ctxParts.join(' · ');
+        bodyEl.appendChild(ctxEl);
+      }
+      if (entry.note) {
+        var noteEl = document.createElement('div');
+        noteEl.className = 'mood-entry-note'; noteEl.textContent = entry.note;
+        bodyEl.appendChild(noteEl);
+      }
+      var delBtn = document.createElement('button');
+      delBtn.className = 'mood-entry-x'; delBtn.textContent = '\u00d7';
+      delBtn.addEventListener('click', (function(ts) { return function() { removeMoodEntry(ts); }; })(entry.ts));
+      row.appendChild(timeEl); row.appendChild(bodyEl); row.appendChild(delBtn);
+      moodList.appendChild(row);
+    });
+  }
+  moodCard.appendChild(moodList);
+
+  var moodBtn = document.createElement('button');
+  moodBtn.className = 'mood-log-btn';
+  moodBtn.textContent = '+ detailed check-in';
+  moodBtn.addEventListener('click', showMoodModal);
+  moodCard.appendChild(moodBtn);
+  app.appendChild(moodCard);
 
   // Food log
   var foodCard = document.createElement('div');
