@@ -188,6 +188,37 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .bfrb-modal-triggers{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 10px}
 .bfrb-modal-triggers button{padding:5px 10px;border:1px solid var(--border);border-radius:16px;background:var(--card);font-size:0.6rem;cursor:pointer;transition:all 0.15s}
 .bfrb-modal-triggers button.selected{border-color:var(--accent-purple);background:#f8f0ff;color:var(--accent-purple)}
+.bfrb-panic-btn{width:100%;padding:12px;border:2px solid var(--accent-pink);background:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:700;color:var(--accent-pink);cursor:pointer;letter-spacing:0.02em;transition:all 0.15s;margin-top:8px;text-transform:uppercase}
+.bfrb-panic-btn:active{background:#fdf0f3}
+.panic-overlay{position:fixed;inset:0;background:rgba(13,5,20,0.97);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;animation:panicIn 0.3s ease}
+@keyframes panicIn{from{opacity:0}to{opacity:1}}
+.panic-step{text-align:center;max-width:340px;animation:panicFade 0.4s ease}
+@keyframes panicFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.panic-icon{font-size:3rem;margin-bottom:16px}
+.panic-title{font-size:1.3rem;font-weight:700;color:#ffffff;margin-bottom:8px;line-height:1.3}
+.panic-body{font-size:0.85rem;color:#c0b8d0;line-height:1.6;margin-bottom:24px}
+.panic-timer-ring{width:100px;height:100px;margin:0 auto 20px}
+.panic-timer-text{font-size:1.8rem;font-weight:700;color:#ffffff;font-family:'JetBrains Mono',monospace}
+.panic-next-btn{padding:12px 32px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);border-radius:10px;color:#ffffff;font-size:0.8rem;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;transition:all 0.15s}
+.panic-next-btn:active{background:rgba(255,255,255,0.15)}
+.panic-skip{position:absolute;top:20px;right:20px;background:none;border:none;color:rgba(255,255,255,0.3);font-size:0.7rem;cursor:pointer;font-family:'JetBrains Mono',monospace;padding:8px}
+.quick-log-btn{position:fixed;bottom:20px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--accent-blue);border:none;box-shadow:0 4px 14px rgba(59,125,216,0.35);cursor:pointer;z-index:100;display:flex;align-items:center;justify-content:center;transition:transform 0.15s}
+.quick-log-btn:active{transform:scale(0.92)}
+.quick-log-btn svg{width:22px;height:22px}
+.quick-log-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);border-radius:16px 16px 0 0;padding:16px 16px 32px;z-index:1000;max-height:70vh;overflow-y:auto;box-shadow:0 -8px 30px rgba(0,0,0,0.12);animation:sheetUp 0.25s ease}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.quick-log-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:999}
+.quick-log-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 12px}
+.quick-log-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px}
+.quick-log-grid{display:flex;flex-direction:column;gap:2px}
+.quick-log-item{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:8px;cursor:pointer;transition:background 0.1s}
+.quick-log-item:active{background:var(--bg)}
+.quick-log-item.taken{opacity:0.5}
+.quick-log-item .check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.quick-log-item.taken .check{border-color:var(--accent-green);background:var(--accent-green)}
+.quick-log-item-name{font-size:0.78rem;font-weight:500}
+.quick-log-item-dose{font-size:0.58rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.quick-log-item-phase{font-size:0.48rem;color:var(--dim);font-family:'JetBrains Mono',monospace;margin-left:auto}
 .caf-timer-label{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
 /* Food log */
 .food-log{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
@@ -277,13 +308,13 @@ const PHASES = [
   {
     id: 'endstim',
     name: 'End of stim window',
-    context: 'when you stop working',
+    context: 'ideal timing \u00b7 take anytime',
     color: '#5a8bbf',
     items: [
       { id: 'nac', name: 'NAC', dose: '600 mg \u00b7 1 cap' },
       { id: 'vitc', name: 'Vitamin C', dose: '500-1000 mg' },
     ],
-    note: 'Vitamin C acidifies urine \u2192 clears residual Dex faster (feature, not bug). NAC restores brain glutathione depleted by stimulant oxidative stress.'
+    note: 'Ideal timing but not mandatory \u2014 NAC can be taken anytime (e.g. for acute hair pulling). Vitamin C acidifies urine \u2192 clears residual Dex faster. NAC restores brain glutathione.'
   },
   {
     id: 'bed',
@@ -1511,6 +1542,13 @@ function render() {
     bfrbCard.appendChild(nacTip);
   }
 
+  // Active pulling panic button
+  var panicBtn = document.createElement('button');
+  panicBtn.className = 'bfrb-panic-btn';
+  panicBtn.textContent = '\u270b Active hair pulling \u2014 tap for help';
+  panicBtn.addEventListener('click', startPanicMode);
+  bfrbCard.appendChild(panicBtn);
+
   app.appendChild(bfrbCard);
 
   // Food log
@@ -1747,7 +1785,186 @@ function render() {
   footer.appendChild(footerH3);
   footer.appendChild(footerP);
   app.appendChild(footer);
+
+  // Quick-log FAB (floating action button)
+  var existingFab = document.querySelector('.quick-log-btn');
+  if (!existingFab) {
+    var fab = document.createElement('button');
+    fab.className = 'quick-log-btn';
+    fab.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+    fab.addEventListener('click', showQuickLogSheet);
+    document.body.appendChild(fab);
+  }
 }
+
+// --- Quick-log bottom sheet ---
+function showQuickLogSheet() {
+  var backdrop = document.createElement('div');
+  backdrop.className = 'quick-log-backdrop';
+  backdrop.addEventListener('click', function() { backdrop.remove(); sheet.remove(); });
+  var sheet = document.createElement('div');
+  sheet.className = 'quick-log-sheet';
+  var handle = document.createElement('div');
+  handle.className = 'quick-log-handle';
+  sheet.appendChild(handle);
+  var title = document.createElement('div');
+  title.className = 'quick-log-title';
+  title.textContent = 'Quick log — tap any supplement';
+  sheet.appendChild(title);
+  var grid = document.createElement('div');
+  grid.className = 'quick-log-grid';
+  PHASES.forEach(function(phase) {
+    phase.items.forEach(function(item) {
+      var row = document.createElement('div');
+      row.className = 'quick-log-item' + (state[item.id] ? ' taken' : '');
+      var check = document.createElement('div');
+      check.className = 'check';
+      if (state[item.id]) {
+        check.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      }
+      var nameEl = document.createElement('div');
+      nameEl.className = 'quick-log-item-name';
+      nameEl.textContent = item.name;
+      var doseEl = document.createElement('div');
+      doseEl.className = 'quick-log-item-dose';
+      doseEl.textContent = item.dose;
+      var phaseEl = document.createElement('div');
+      phaseEl.className = 'quick-log-item-phase';
+      phaseEl.textContent = state[item.id] || phase.name;
+      var info = document.createElement('div');
+      info.appendChild(nameEl); info.appendChild(doseEl);
+      row.appendChild(check); row.appendChild(info); row.appendChild(phaseEl);
+      row.addEventListener('click', function() {
+        toggleItem(item.id);
+        backdrop.remove(); sheet.remove();
+      });
+      grid.appendChild(row);
+    });
+  });
+  sheet.appendChild(grid);
+  document.body.appendChild(backdrop);
+  document.body.appendChild(sheet);
+}
+
+// --- Active pulling panic mode (HRT-based intervention) ---
+var PANIC_STEPS = [
+  {
+    icon: '\u270b',
+    title: 'STOP \u2014 Hands down now',
+    body: 'Move both hands away from your head. Place them flat on your thighs or desk.\n\nThis is awareness training \u2014 the first step of Habit Reversal Training (Azrin & Nunn 1973).',
+    timerSec: 0
+  },
+  {
+    icon: '\u270a',
+    title: 'Clench both fists',
+    body: 'Squeeze hard for 60 seconds. This is a competing response \u2014 physically incompatible with pulling (Woods & Miltenberger 1995).\n\nFeel the tension. Breathe through it.',
+    timerSec: 60
+  },
+  {
+    icon: '\u2744\ufe0f',
+    title: 'Sensory substitution',
+    body: 'Rub your fingertips on a textured surface \u2014 jeans, carpet, velcro, a fidget toy.\n\nAlternative tactile stimulation addresses the sensory reinforcement driving the pull (Rapp et al. 1999).',
+    timerSec: 30
+  },
+  {
+    icon: '\ud83c\udf2c\ufe0f',
+    title: 'Breathe: 4-7-8',
+    body: 'Inhale 4 sec \u2192 Hold 7 sec \u2192 Exhale 8 sec.\n\nThis activates parasympathetic response and breaks the autonomic arousal sustaining the trance.',
+    timerSec: 38
+  },
+  {
+    icon: '\ud83d\udcaa',
+    title: 'You broke the cycle',
+    body: 'The urge passes. Every interrupted episode weakens the habit loop.\n\nConsider taking NAC now if you haven\u2019t today \u2014 it modulates the glutamate driving compulsive urges.',
+    timerSec: 0
+  }
+];
+
+function startPanicMode() {
+  // Vibrate if supported
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  var currentStep = 0;
+  var timerInterval = null;
+
+  var overlay = document.createElement('div');
+  overlay.className = 'panic-overlay';
+
+  var skipBtn = document.createElement('button');
+  skipBtn.className = 'panic-skip';
+  skipBtn.textContent = 'skip \u00d7';
+  skipBtn.addEventListener('click', function() {
+    if (timerInterval) clearInterval(timerInterval);
+    overlay.remove();
+    // Auto-log episode
+    addBfrbEntry(3, 'Stimulant', 'Interrupted with panic button');
+  });
+  overlay.appendChild(skipBtn);
+
+  function showStep(idx) {
+    if (timerInterval) clearInterval(timerInterval);
+    var step = PANIC_STEPS[idx];
+    var existing = overlay.querySelector('.panic-step');
+    if (existing) existing.remove();
+
+    var stepEl = document.createElement('div');
+    stepEl.className = 'panic-step';
+
+    var icon = document.createElement('div');
+    icon.className = 'panic-icon';
+    icon.textContent = step.icon;
+    stepEl.appendChild(icon);
+
+    var title = document.createElement('div');
+    title.className = 'panic-title';
+    title.textContent = step.title;
+    stepEl.appendChild(title);
+
+    var body = document.createElement('div');
+    body.className = 'panic-body';
+    body.textContent = step.body;
+    stepEl.appendChild(body);
+
+    if (step.timerSec > 0) {
+      var remaining = step.timerSec;
+      var timerText = document.createElement('div');
+      timerText.className = 'panic-timer-text';
+      timerText.textContent = remaining + 's';
+      stepEl.appendChild(timerText);
+      timerInterval = setInterval(function() {
+        remaining--;
+        timerText.textContent = remaining + 's';
+        if (remaining <= 0) {
+          clearInterval(timerInterval);
+          if (idx < PANIC_STEPS.length - 1) {
+            showStep(idx + 1);
+          }
+        }
+      }, 1000);
+    }
+
+    var nextBtn = document.createElement('button');
+    nextBtn.className = 'panic-next-btn';
+    if (idx >= PANIC_STEPS.length - 1) {
+      nextBtn.textContent = 'Done \u2014 log episode';
+      nextBtn.addEventListener('click', function() {
+        if (timerInterval) clearInterval(timerInterval);
+        overlay.remove();
+        addBfrbEntry(3, '', 'Interrupted with panic button');
+      });
+    } else {
+      nextBtn.textContent = 'Next \u2192';
+      nextBtn.addEventListener('click', function() {
+        showStep(idx + 1);
+      });
+    }
+    stepEl.appendChild(nextBtn);
+    overlay.appendChild(stepEl);
+  }
+
+  document.body.appendChild(overlay);
+  showStep(0);
+}
+
 // --- Sky scene: sun/moon synced to Toronto sunrise/sunset ---
 const TORONTO = { lat: 43.6532, lng: -79.3832 };
 let sunTimes = null;
