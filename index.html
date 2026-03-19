@@ -130,49 +130,31 @@ const PHASES = [
       { id: 'wellbutrin', name: 'Wellbutrin XL', dose: 'prescribed dose', rx: true },
       { id: 'tyrosine', name: 'L-Tyrosine', dose: '500 mg \u00b7 1 cap' },
     ],
-    note: 'Wait 30-60 min before food. Tyrosine needs empty stomach for BBB transport.'
+    note: 'Wait 30-60 min before food. Tyrosine needs empty stomach for BBB transport. Consider cycling 5 on / 2 off.'
   },
   {
     id: 'breakfast',
     name: 'Breakfast',
-    context: 'with food + fat \u00b7 T+30-60m',
+    context: 'with food + fat',
     color: '#c49a2c',
     items: [
       { id: 'b50', name: 'B50 Complex', dose: '1 cap' },
       { id: 'electrolytes', name: 'Electrolyte caps', dose: '2 caps' },
       { id: 'd3', name: 'Vitamin D3', dose: '2500 IU \u00b7 1 softgel' },
-      { id: 'krill', name: 'Krill Oil', dose: '2-4 softgels (target 1g EPA)' },
+      { id: 'krill', name: 'Krill Oil', dose: '2 softgels' },
       { id: 'magtein1', name: 'Magtein (1 of 3)', dose: '1 cap \u00b7 667 mg' },
-      { id: 'selenium', name: 'Selenium', dose: '200 mcg' },
-      { id: 'coq10', name: 'CoQ10 (ubiquinol)', dose: '100-200 mg' },
-      { id: 'vite', name: 'Vitamin E (mixed tocopherols)', dose: '200 IU' },
-      { id: 'creatine', name: 'Creatine monohydrate', dose: '3-5 g (in food/shake)' },
-      { id: 'ps', name: 'Phosphatidylserine', dose: '200 mg' },
-      { id: 'probiotic', name: 'Probiotic', dose: '1 cap' },
     ],
-    note: 'D3, krill, CoQ10, Vit E need fat. Eat eggs, butter, yogurt. Check krill label for EPA content.'
+    note: 'D3 + krill need fat. B6 in B50 is a cofactor for dopamine synthesis. Check krill label \u2014 you may need more to hit 1g EPA.'
   },
   {
-    id: 'lunch',
-    name: 'Lunch',
-    context: 'with food \u00b7 prioritize protein',
+    id: 'afternoon',
+    name: 'Afternoon',
+    context: 'with lunch / snack',
     color: '#22a558',
     items: [
-      { id: 'zinc1', name: 'Zinc (1 of 2)', dose: '15 mg' },
       { id: 'alcar', name: 'ALCAR', dose: '1500 mg \u00b7 1 cap' },
-      { id: 'electrolytes2', name: 'Electrolytes (optional)', dose: '1-2 caps if active' },
     ],
-    note: 'Eat protein even if appetite is low. Zinc + food reduces GI upset. Arnold 2011: 30mg/day zinc = 37% lower Dex dose needed.'
-  },
-  {
-    id: 'dinner',
-    name: 'Dinner',
-    context: 'largest meal if possible',
-    color: '#3b7dd8',
-    items: [
-      { id: 'zinc2', name: 'Zinc (2 of 2)', dose: '15 mg' },
-    ],
-    note: 'Prioritize protein, healthy fats, calories. This is your recovery meal.'
+    note: 'ADHD evidence is weak but supports mitochondrial function. Eat protein even if appetite is suppressed.'
   },
   {
     id: 'endstim',
@@ -180,33 +162,21 @@ const PHASES = [
     context: 'when you stop working',
     color: '#5a8bbf',
     items: [
-      { id: 'nac', name: 'NAC', dose: '600-1200 mg' },
+      { id: 'nac', name: 'NAC', dose: '600 mg \u00b7 1 cap' },
       { id: 'vitc', name: 'Vitamin C', dose: '500-1000 mg' },
-      { id: 'taurine', name: 'Taurine', dose: '1-2 g' },
     ],
-    note: 'Vitamin C here not morning \u2014 acidifies urine to clear residual Dex. NAC restores glutathione. Taurine for cardiovascular protection.'
-  },
-  {
-    id: 'prebed',
-    name: '2-3 hrs before bed',
-    context: 'circadian reset',
-    color: '#7c4dca',
-    items: [
-      { id: 'melatonin', name: 'Melatonin (low dose)', dose: '0.3-1 mg' },
-    ],
-    note: 'Low dose is MORE effective than high dose. Take 2-3 hrs before bed for circadian effect, not 30 min.'
+    note: 'Vitamin C acidifies urine \u2192 clears residual Dex faster (feature, not bug). NAC restores brain glutathione depleted by stimulant oxidative stress.'
   },
   {
     id: 'bed',
     name: 'Before bed',
-    context: '30 min before sleep',
+    context: '30-60 min before sleep',
     color: '#8b5abf',
     items: [
       { id: 'magtein23', name: 'Magtein (2+3 of 3)', dose: '2 caps \u00b7 1334 mg' },
       { id: 'magbisgly', name: 'Mag bisglycinate powder', dose: '200-300 mg elemental' },
-      { id: 'nac2', name: 'NAC (optional 2nd dose)', dose: '600 mg' },
     ],
-    note: 'Still take on zero-sleep nights. Magnesium blocks NMDA \u2192 prevents tolerance. NAC has short half-life, 2nd dose extends glutathione coverage.'
+    note: 'Magnesium is an NMDA antagonist \u2192 blocks stimulant tolerance/sensitization (Wolf 1998). Still take on zero-sleep nights.'
   }
 ];
 let state = {};
@@ -697,7 +667,7 @@ function render() {
   const footerH3 = document.createElement('h3');
   footerH3.textContent = 'Reminders';
   const footerP = document.createElement('p');
-  footerP.textContent = 'Eat protein at every meal. Salt your food. Hydrate extra \u2014 stimulants are dehydrating. Get ferritin, vitamin D, zinc, and RBC magnesium tested. On 35hr sessions: shift end-of-stim and bed phases to whenever you wind down. Always take mag even if not sleeping. Introduce new supplements ONE at a time.';
+  footerP.textContent = 'Eat protein at every meal. Salt your food. Hydrate extra \u2014 stimulants are dehydrating. On 35hr sessions: shift end-of-stim and bed phases to whenever you wind down. Always take mag even if not sleeping.';
   footer.appendChild(footerH3);
   footer.appendChild(footerP);
   app.appendChild(footer);
