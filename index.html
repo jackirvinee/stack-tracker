@@ -54,6 +54,30 @@ h1{font-size:1.3rem;font-weight:700;letter-spacing:-0.03em}
 .footer-note{margin-top:2rem;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:8px}
 .footer-note h3{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem}
 .footer-note p{font-size:0.72rem;color:var(--dim);line-height:1.6}
+.dose-log{margin-top:4px;margin-bottom:4px}
+.dose-log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:0 0.25rem}
+.dose-log-title{font-size:0.65rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-pink)}
+.log-add-btn{font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-pink);background:none;border:1px solid var(--accent-pink);padding:3px 8px;border-radius:4px;cursor:pointer;letter-spacing:0.03em}
+.log-add-btn:active{background:#2a1a22}
+.log-entry{display:flex;align-items:center;gap:8px;padding:0.5rem 0.75rem;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:3px}
+.log-entry-time{font-size:0.65rem;color:var(--accent-pink);font-family:'JetBrains Mono',monospace;min-width:52px}
+.log-entry-detail{font-size:0.75rem;color:var(--text);flex:1}
+.log-entry-type{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted);padding:1px 5px;border:1px solid var(--border);border-radius:3px}
+.log-entry-remove{font-size:0.6rem;color:var(--dim);background:none;border:none;cursor:pointer;padding:4px;font-family:'JetBrains Mono',monospace}
+.log-entry-remove:active{color:var(--accent-pink)}
+.log-empty{font-size:0.65rem;color:var(--dim);font-style:italic;padding:0.4rem 0.75rem}
+.dose-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;padding:1rem}
+.dose-modal{background:#1a1a18;border:1px solid var(--border);border-radius:12px;padding:1.25rem;width:100%;max-width:320px}
+.dose-modal h3{font-size:0.85rem;margin-bottom:1rem;color:var(--text)}
+.dose-modal label{display:block;font-size:0.65rem;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px}
+.dose-modal select,.dose-modal input{width:100%;padding:0.5rem;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;margin-bottom:0.75rem;-webkit-appearance:none;appearance:none}
+.dose-modal select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%236b6965' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.5rem center}
+.dose-modal-btns{display:flex;gap:8px;margin-top:0.5rem}
+.dose-modal-btns button{flex:1;padding:0.5rem;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:500;cursor:pointer;border:none}
+.modal-cancel{background:var(--border);color:var(--muted)}
+.modal-save{background:var(--accent-pink);color:#0d0d0d}
+.modal-cancel:active{background:#3a3835}
+.modal-save:active{background:#a64a68}
 </style>
 </head>
 <body>
@@ -161,6 +185,86 @@ function resetDay() {
     saveState();
     render();
   }
+}
+function getDexLog() {
+  return state._dexLog || [];
+}
+function addDexDose(type, mg) {
+  if (!state._dexLog) state._dexLog = [];
+  state._dexLog.push({
+    type: type,
+    mg: mg,
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    ts: Date.now()
+  });
+  saveState();
+  render();
+}
+function removeDexDose(ts) {
+  if (!state._dexLog) return;
+  state._dexLog = state._dexLog.filter(function(e) { return e.ts !== ts; });
+  saveState();
+  render();
+}
+function showDoseModal() {
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal';
+
+  var h3 = document.createElement('h3');
+  h3.textContent = 'Log Dexedrine dose';
+
+  var typeLabel = document.createElement('label');
+  typeLabel.textContent = 'Type';
+  var typeSelect = document.createElement('select');
+  ['XR', 'IR'].forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = 'Dexedrine ' + t;
+    typeSelect.appendChild(opt);
+  });
+
+  var mgLabel = document.createElement('label');
+  mgLabel.textContent = 'Dose (mg)';
+  var mgInput = document.createElement('input');
+  mgInput.type = 'number';
+  mgInput.inputMode = 'decimal';
+  mgInput.placeholder = 'e.g. 10';
+  mgInput.min = '0';
+  mgInput.step = '2.5';
+
+  var btns = document.createElement('div');
+  btns.className = 'dose-modal-btns';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'modal-cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'modal-save';
+  saveBtn.textContent = 'Log dose';
+  saveBtn.addEventListener('click', function() {
+    var mg = mgInput.value.trim();
+    if (!mg) { mgInput.focus(); return; }
+    addDexDose(typeSelect.value, mg);
+    overlay.remove();
+  });
+  btns.appendChild(cancelBtn);
+  btns.appendChild(saveBtn);
+
+  modal.appendChild(h3);
+  modal.appendChild(typeLabel);
+  modal.appendChild(typeSelect);
+  modal.appendChild(mgLabel);
+  modal.appendChild(mgInput);
+  modal.appendChild(btns);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  mgInput.focus();
 }
 function getProgress() {
   const allItems = PHASES.flatMap(p => p.items.map(i => i.id));
@@ -280,6 +384,58 @@ function render() {
       noteP.textContent = phase.note;
       noteBlock.appendChild(noteP);
       phaseDiv.appendChild(noteBlock);
+    }
+
+    // Dex dose log
+    if (phase.id === 'dex') {
+      const logDiv = document.createElement('div');
+      logDiv.className = 'dose-log';
+      const logHeader = document.createElement('div');
+      logHeader.className = 'dose-log-header';
+      const logTitle = document.createElement('div');
+      logTitle.className = 'dose-log-title';
+      logTitle.textContent = 'Dose log';
+      const addBtn = document.createElement('button');
+      addBtn.className = 'log-add-btn';
+      addBtn.textContent = '+ log dose';
+      addBtn.addEventListener('click', showDoseModal);
+      logHeader.appendChild(logTitle);
+      logHeader.appendChild(addBtn);
+      logDiv.appendChild(logHeader);
+
+      const entries = getDexLog();
+      if (entries.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'log-empty';
+        empty.textContent = 'No doses logged today';
+        logDiv.appendChild(empty);
+      } else {
+        for (const entry of entries) {
+          const row = document.createElement('div');
+          row.className = 'log-entry';
+          const timeSpan = document.createElement('div');
+          timeSpan.className = 'log-entry-time';
+          timeSpan.textContent = entry.time;
+          const detail = document.createElement('div');
+          detail.className = 'log-entry-detail';
+          detail.textContent = entry.mg + ' mg';
+          const typeBadge = document.createElement('div');
+          typeBadge.className = 'log-entry-type';
+          typeBadge.textContent = entry.type;
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'log-entry-remove';
+          removeBtn.textContent = '\u00d7';
+          removeBtn.addEventListener('click', (function(ts) {
+            return function(e) { e.stopPropagation(); removeDexDose(ts); };
+          })(entry.ts));
+          row.appendChild(timeSpan);
+          row.appendChild(detail);
+          row.appendChild(typeBadge);
+          row.appendChild(removeBtn);
+          logDiv.appendChild(row);
+        }
+      }
+      phaseDiv.appendChild(logDiv);
     }
 
     app.appendChild(phaseDiv);
