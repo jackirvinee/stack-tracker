@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stack-v4';
+const CACHE_NAME = 'stack-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -24,5 +24,18 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
+  );
+});
+
+// Handle notification clicks - open or focus the app
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then(clients => {
+      if (clients.length > 0) {
+        return clients[0].focus();
+      }
+      return self.clients.openWindow('./');
+    })
   );
 });

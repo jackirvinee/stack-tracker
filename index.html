@@ -87,6 +87,9 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .modal-cancel:active{background:#ebebeb}
 .modal-save{background:var(--accent-pink);color:#ffffff}
 .modal-save:active{background:#b83a5e}
+.notif-toggle-row{display:flex;align-items:center;gap:8px;padding:8px 0 4px;margin-bottom:4px}
+.notif-checkbox{width:16px;height:16px;accent-color:var(--accent-pink);flex-shrink:0;cursor:pointer}
+.notif-label{font-size:0.65rem;color:var(--sub);cursor:pointer;line-height:1.3}
 .trackers{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:24px}
 .tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);text-align:center}
 .tracker-label{font-size:0.5rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px}
@@ -209,16 +212,14 @@ function resetDay() {
 function getDexLog() {
   return state._dexLog || [];
 }
-function addDexDose(type, mg) {
+function addDexDose(type, mg, customTime) {
   if (!state._dexLog) state._dexLog = [];
-  state._dexLog.push({
-    type: type,
-    mg: mg,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    ts: Date.now()
-  });
+  var timeStr = customTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  var ts = Date.now();
+  state._dexLog.push({ type: type, mg: mg, time: timeStr, ts: ts });
   saveState();
   render();
+  return ts;
 }
 function removeDexDose(ts) {
   if (!state._dexLog) return;
@@ -226,6 +227,67 @@ function removeDexDose(ts) {
   saveState();
   render();
 }
+// --- Notification system ---
+var focusTimers = [];
+var KICK_IN_MIN = 36;
+var FOCUS_SEQUENCE = [
+  { min: 0,  title: 'Dose logged', body: 'You have ~36 minutes. Pick your ONE task now. What will you work on?' },
+  { min: 5,  title: 'Set up your workspace', body: '31 min to kick-in. Close extra tabs. Phone on DND. Open only what you need.' },
+  { min: 15, title: 'Pre-flight check', body: '21 min left. Are distractions cleared? Water nearby? Task chosen?' },
+  { min: 25, title: 'Almost time', body: '11 min. Start easing into the task now. Don\'t wait for the wave\u2014meet it working.' },
+  { min: 33, title: 'Lock in', body: '3 minutes. Deep breath. Eyes on your task. This is it.' },
+  { min: 36, title: 'It\'s go time', body: 'Medication active. You should be feeling it. Stay locked in. Don\'t check your phone.' },
+  { min: 50, title: 'Focus check-in', body: 'Still on task? If you drifted, gently come back. No judgement\u2014just refocus.' },
+  { min: 90, title: 'Hydration reminder', body: 'Drink water. Stretch for 30 seconds. Then back to it.' }
+];
+
+function requestNotifPermission() {
+  if (!('Notification' in window)) return Promise.resolve('denied');
+  if (Notification.permission === 'granted') return Promise.resolve('granted');
+  if (Notification.permission === 'denied') return Promise.resolve('denied');
+  return Notification.requestPermission();
+}
+
+function sendNotif(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    new Notification(title, { body: body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png' });
+  } catch(e) {
+    // SW notification fallback for iOS
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then(function(reg) {
+        reg.showNotification(title, { body: body, icon: 'icons/icon-192.png' });
+      });
+    }
+  }
+}
+
+function scheduleFocusNotifs(doseTimeMs) {
+  // Clear any existing timers
+  focusTimers.forEach(function(t) { clearTimeout(t); });
+  focusTimers = [];
+  var now = Date.now();
+  FOCUS_SEQUENCE.forEach(function(step) {
+    var fireAt = doseTimeMs + step.min * 60000;
+    var delay = fireAt - now;
+    if (delay < 0) return; // skip past notifications
+    if (delay === 0) {
+      sendNotif(step.title, step.body);
+    } else {
+      focusTimers.push(setTimeout(function() {
+        sendNotif(step.title, step.body);
+      }, delay));
+    }
+  });
+}
+
+function getNowTimeString() {
+  var d = new Date();
+  var h = d.getHours().toString().padStart(2, '0');
+  var m = d.getMinutes().toString().padStart(2, '0');
+  return h + ':' + m;
+}
+
 function showDoseModal() {
   var overlay = document.createElement('div');
   overlay.className = 'dose-modal-overlay';
@@ -258,6 +320,26 @@ function showDoseModal() {
   mgInput.min = '0';
   mgInput.step = '2.5';
 
+  var timeLabel = document.createElement('label');
+  timeLabel.textContent = 'Time taken';
+  var timeInput = document.createElement('input');
+  timeInput.type = 'time';
+  timeInput.value = getNowTimeString();
+
+  var notifRow = document.createElement('div');
+  notifRow.className = 'notif-toggle-row';
+  var notifCheck = document.createElement('input');
+  notifCheck.type = 'checkbox';
+  notifCheck.id = 'notif-toggle';
+  notifCheck.checked = true;
+  notifCheck.className = 'notif-checkbox';
+  var notifLabel = document.createElement('label');
+  notifLabel.htmlFor = 'notif-toggle';
+  notifLabel.className = 'notif-label';
+  notifLabel.textContent = 'Send focus notifications (36 min sequence)';
+  notifRow.appendChild(notifCheck);
+  notifRow.appendChild(notifLabel);
+
   var btns = document.createElement('div');
   btns.className = 'dose-modal-btns';
   var cancelBtn = document.createElement('button');
@@ -270,7 +352,21 @@ function showDoseModal() {
   saveBtn.addEventListener('click', function() {
     var mg = mgInput.value.trim();
     if (!mg) { mgInput.focus(); return; }
-    addDexDose(typeSelect.value, mg);
+    // Parse custom time
+    var timeParts = timeInput.value.split(':');
+    var doseDate = new Date();
+    doseDate.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0, 0);
+    var displayTime = doseDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    addDexDose(typeSelect.value, mg, displayTime);
+
+    // Schedule notifications
+    if (notifCheck.checked) {
+      requestNotifPermission().then(function(perm) {
+        if (perm === 'granted') {
+          scheduleFocusNotifs(doseDate.getTime());
+        }
+      });
+    }
     overlay.remove();
   });
   btns.appendChild(cancelBtn);
@@ -281,6 +377,9 @@ function showDoseModal() {
   modal.appendChild(typeSelect);
   modal.appendChild(mgLabel);
   modal.appendChild(mgInput);
+  modal.appendChild(timeLabel);
+  modal.appendChild(timeInput);
+  modal.appendChild(notifRow);
   modal.appendChild(btns);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
