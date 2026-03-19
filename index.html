@@ -87,6 +87,17 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .modal-cancel:active{background:#ebebeb}
 .modal-save{background:var(--accent-pink);color:#ffffff}
 .modal-save:active{background:#b83a5e}
+.trackers{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:24px}
+.tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);text-align:center}
+.tracker-label{font-size:0.5rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px}
+.tracker-value{font-size:1.4rem;font-weight:700;letter-spacing:-0.03em;margin-bottom:2px}
+.tracker-unit{font-size:0.5rem;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:8px}
+.tracker-btns{display:flex;gap:4px;justify-content:center}
+.tracker-btn{width:32px;height:28px;border:1px solid var(--border);background:var(--bg);border-radius:6px;font-size:0.85rem;font-weight:600;color:var(--sub);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.1s;font-family:'DM Sans',sans-serif}
+.tracker-btn:active{background:var(--border);transform:scale(0.92)}
+.tracker-water .tracker-value{color:var(--accent-blue)}
+.tracker-protein .tracker-value{color:var(--accent-warm)}
+.tracker-cal .tracker-value{color:var(--accent-purple)}
 </style>
 </head>
 <body>
@@ -275,6 +286,16 @@ function showDoseModal() {
   document.body.appendChild(overlay);
   mgInput.focus();
 }
+function adjustTracker(key, delta) {
+  var val = (state['_t_' + key] || 0) + delta;
+  if (val < 0) val = 0;
+  state['_t_' + key] = val;
+  saveState();
+  render();
+}
+function getTracker(key) {
+  return state['_t_' + key] || 0;
+}
 function getProgress() {
   const allItems = PHASES.flatMap(p => p.items.map(i => i.id));
   const taken = allItems.filter(id => state[id]);
@@ -321,6 +342,50 @@ function render() {
   statusBar.appendChild(track);
   statusBar.appendChild(label);
   app.appendChild(statusBar);
+
+  // Daily trackers
+  var trackersDiv = document.createElement('div');
+  trackersDiv.className = 'trackers';
+  var trackerDefs = [
+    { key: 'water', label: 'Water', unit: 'glasses', step: 1, cls: 'tracker-water' },
+    { key: 'protein', label: 'Protein', unit: 'grams', step: 10, cls: 'tracker-protein' },
+    { key: 'cal', label: 'Calories', unit: 'kcal', step: 100, cls: 'tracker-cal' }
+  ];
+  trackerDefs.forEach(function(td) {
+    var t = document.createElement('div');
+    t.className = 'tracker ' + td.cls;
+    var lbl = document.createElement('div');
+    lbl.className = 'tracker-label';
+    lbl.textContent = td.label;
+    var val = document.createElement('div');
+    val.className = 'tracker-value';
+    val.textContent = getTracker(td.key);
+    var unit = document.createElement('div');
+    unit.className = 'tracker-unit';
+    unit.textContent = td.unit;
+    var btns = document.createElement('div');
+    btns.className = 'tracker-btns';
+    var minusBtn = document.createElement('button');
+    minusBtn.className = 'tracker-btn';
+    minusBtn.textContent = '\u2212';
+    minusBtn.addEventListener('click', (function(k, s) {
+      return function() { adjustTracker(k, -s); };
+    })(td.key, td.step));
+    var plusBtn = document.createElement('button');
+    plusBtn.className = 'tracker-btn';
+    plusBtn.textContent = '+';
+    plusBtn.addEventListener('click', (function(k, s) {
+      return function() { adjustTracker(k, s); };
+    })(td.key, td.step));
+    btns.appendChild(minusBtn);
+    btns.appendChild(plusBtn);
+    t.appendChild(lbl);
+    t.appendChild(val);
+    t.appendChild(unit);
+    t.appendChild(btns);
+    trackersDiv.appendChild(t);
+  });
+  app.appendChild(trackersDiv);
 
   // Phases
   for (const phase of PHASES) {
