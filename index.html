@@ -101,6 +101,20 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .tracker-water .tracker-value{color:var(--accent-blue)}
 .tracker-protein .tracker-value{color:var(--accent-warm)}
 .tracker-cal .tracker-value{color:var(--accent-purple)}
+.dex-tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
+.dex-tracker-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.dex-tracker-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-pink);font-weight:500}
+.dex-tracker-total{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.dex-log-list{margin-bottom:8px}
+.dex-log-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.dex-log-item:last-child{border-bottom:none}
+.dex-log-time{font-size:0.6rem;color:var(--accent-pink);font-family:'JetBrains Mono',monospace;min-width:50px;font-weight:500}
+.dex-log-info{flex:1;font-size:0.72rem;color:var(--text);font-weight:500}
+.dex-log-badge{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted);padding:2px 5px;border:1px solid var(--border);border-radius:4px}
+.dex-log-x{font-size:0.6rem;color:var(--dim);background:none;border:none;cursor:pointer;padding:2px 6px;font-family:'JetBrains Mono',monospace}
+.dex-empty{font-size:0.6rem;color:var(--dim);padding:4px 0}
+.dex-log-btn{width:100%;padding:8px;border:1px dashed var(--accent-pink);background:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-pink);cursor:pointer;letter-spacing:0.03em;transition:all 0.15s}
+.dex-log-btn:active{background:#fef0f3}
 </style>
 </head>
 <body>
@@ -229,17 +243,44 @@ function removeDexDose(ts) {
 }
 // --- Notification system ---
 var focusTimers = [];
-var KICK_IN_MIN = 36;
-var FOCUS_SEQUENCE = [
-  { min: 0,  title: 'Dose logged', body: 'You have ~36 minutes. Pick your ONE task now. What will you work on?' },
-  { min: 5,  title: 'Set up your workspace', body: '31 min to kick-in. Close extra tabs. Phone on DND. Open only what you need.' },
-  { min: 15, title: 'Pre-flight check', body: '21 min left. Are distractions cleared? Water nearby? Task chosen?' },
-  { min: 25, title: 'Almost time', body: '11 min. Start easing into the task now. Don\'t wait for the wave\u2014meet it working.' },
-  { min: 33, title: 'Lock in', body: '3 minutes. Deep breath. Eyes on your task. This is it.' },
-  { min: 36, title: 'It\'s go time', body: 'Medication active. You should be feeling it. Stay locked in. Don\'t check your phone.' },
-  { min: 50, title: 'Focus check-in', body: 'Still on task? If you drifted, gently come back. No judgement\u2014just refocus.' },
-  { min: 90, title: 'Hydration reminder', body: 'Drink water. Stretch for 30 seconds. Then back to it.' }
-];
+var FOCUS_SEQUENCES = {
+  IR: {
+    kickIn: 20,
+    duration: 300, // 5 hours
+    steps: [
+      { min: 0,   title: 'IR dose logged', body: 'Kicks in ~20 min, lasts ~5 hours. Pick your ONE task now.' },
+      { min: 5,   title: 'Set up your workspace', body: '15 min to kick-in. Close extra tabs. Phone on DND.' },
+      { min: 12,  title: 'Almost time', body: '8 min. Start easing into the task. Meet the wave working.' },
+      { min: 18,  title: 'Lock in', body: '2 minutes. Deep breath. Eyes on your task.' },
+      { min: 20,  title: 'It\'s go time', body: 'IR is active. You should feel it. Stay locked in.' },
+      { min: 45,  title: 'Focus check-in', body: 'Still on task? If you drifted, come back. No judgement.' },
+      { min: 90,  title: 'Hydration + protein', body: 'Drink water. Eat something with protein if you haven\'t.' },
+      { min: 150, title: 'Past the peak', body: '2.5 hours in. IR is tapering. Push through your hardest task now while you still have it.' },
+      { min: 240, title: 'Winding down', body: '1 hour left on IR. Finish up priority tasks. Start wrapping loose ends.' },
+      { min: 285, title: 'IR wearing off', body: '15 min left. Jot down where you are so you can pick up later. Hydrate.' },
+      { min: 300, title: 'IR window closed', body: '5 hours done. Time for NAC + Vitamin C if you\'re done for the day.' }
+    ]
+  },
+  XR: {
+    kickIn: 36,
+    duration: 480, // 8 hours
+    steps: [
+      { min: 0,   title: 'XR dose logged', body: 'Kicks in ~36 min, lasts ~8 hours. Pick your ONE task now.' },
+      { min: 5,   title: 'Set up your workspace', body: '31 min to kick-in. Close extra tabs. Phone on DND.' },
+      { min: 15,  title: 'Pre-flight check', body: '21 min left. Distractions cleared? Water nearby? Task chosen?' },
+      { min: 25,  title: 'Almost time', body: '11 min. Start easing into the task. Don\'t wait for the wave\u2014meet it working.' },
+      { min: 33,  title: 'Lock in', body: '3 minutes. Deep breath. Eyes on your task. This is it.' },
+      { min: 36,  title: 'It\'s go time', body: 'XR is active. First wave hitting. Stay locked in. Don\'t check your phone.' },
+      { min: 60,  title: 'Focus check-in', body: 'Still on task? If you drifted, gently come back.' },
+      { min: 120, title: '2-hour mark', body: 'Drink water. Stretch 30 seconds. Eat protein if you haven\'t. Then back to it.' },
+      { min: 180, title: 'Halfway', body: '4 hours left on XR. Second release wave coming. Great time to tackle the hardest thing.' },
+      { min: 240, title: 'Second half', body: 'XR second release fully active. Deep work time. Stay in the zone.' },
+      { min: 360, title: 'Final stretch', body: '2 hours left. Start prioritizing what MUST get done today.' },
+      { min: 450, title: 'Winding down', body: '30 min left on XR. Wrap up. Write down where you stopped. Hydrate.' },
+      { min: 480, title: 'XR window closed', body: '8 hours done. Take NAC + Vitamin C. Eat a real meal. You earned it.' }
+    ]
+  }
+};
 
 function requestNotifPermission() {
   if (!('Notification' in window)) return Promise.resolve('denied');
@@ -262,15 +303,16 @@ function sendNotif(title, body) {
   }
 }
 
-function scheduleFocusNotifs(doseTimeMs) {
+function scheduleFocusNotifs(doseTimeMs, type) {
   // Clear any existing timers
   focusTimers.forEach(function(t) { clearTimeout(t); });
   focusTimers = [];
+  var seq = FOCUS_SEQUENCES[type] || FOCUS_SEQUENCES.XR;
   var now = Date.now();
-  FOCUS_SEQUENCE.forEach(function(step) {
+  seq.steps.forEach(function(step) {
     var fireAt = doseTimeMs + step.min * 60000;
     var delay = fireAt - now;
-    if (delay < 0) return; // skip past notifications
+    if (delay < 0) return;
     if (delay === 0) {
       sendNotif(step.title, step.body);
     } else {
@@ -359,11 +401,12 @@ function showDoseModal() {
     var displayTime = doseDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     addDexDose(typeSelect.value, mg, displayTime);
 
-    // Schedule notifications
+    // Schedule notifications based on IR vs XR
     if (notifCheck.checked) {
+      var doseType = typeSelect.value;
       requestNotifPermission().then(function(perm) {
         if (perm === 'granted') {
-          scheduleFocusNotifs(doseDate.getTime());
+          scheduleFocusNotifs(doseDate.getTime(), doseType);
         }
       });
     }
@@ -486,6 +529,65 @@ function render() {
   });
   app.appendChild(trackersDiv);
 
+  // Dex dose tracker card
+  var dexCard = document.createElement('div');
+  dexCard.className = 'dex-tracker';
+  var dexHeader = document.createElement('div');
+  dexHeader.className = 'dex-tracker-header';
+  var dexTitle = document.createElement('div');
+  dexTitle.className = 'dex-tracker-title';
+  dexTitle.textContent = 'Dexedrine today';
+  var dexEntries = getDexLog();
+  var totalMg = dexEntries.reduce(function(sum, e) { return sum + parseFloat(e.mg || 0); }, 0);
+  var dexTotal = document.createElement('div');
+  dexTotal.className = 'dex-tracker-total';
+  dexTotal.textContent = totalMg > 0 ? totalMg + ' mg total' : '';
+  dexHeader.appendChild(dexTitle);
+  dexHeader.appendChild(dexTotal);
+  dexCard.appendChild(dexHeader);
+
+  var dexList = document.createElement('div');
+  dexList.className = 'dex-log-list';
+  if (dexEntries.length === 0) {
+    var dexEmpty = document.createElement('div');
+    dexEmpty.className = 'dex-empty';
+    dexEmpty.textContent = 'No doses logged';
+    dexList.appendChild(dexEmpty);
+  } else {
+    dexEntries.forEach(function(entry) {
+      var row = document.createElement('div');
+      row.className = 'dex-log-item';
+      var t = document.createElement('div');
+      t.className = 'dex-log-time';
+      t.textContent = entry.time;
+      var info = document.createElement('div');
+      info.className = 'dex-log-info';
+      info.textContent = entry.mg + ' mg';
+      var badge = document.createElement('div');
+      badge.className = 'dex-log-badge';
+      badge.textContent = entry.type;
+      var x = document.createElement('button');
+      x.className = 'dex-log-x';
+      x.textContent = '\u00d7';
+      x.addEventListener('click', (function(ts) {
+        return function() { removeDexDose(ts); };
+      })(entry.ts));
+      row.appendChild(t);
+      row.appendChild(info);
+      row.appendChild(badge);
+      row.appendChild(x);
+      dexList.appendChild(row);
+    });
+  }
+  dexCard.appendChild(dexList);
+
+  var dexBtn = document.createElement('button');
+  dexBtn.className = 'dex-log-btn';
+  dexBtn.textContent = '+ log dex dose';
+  dexBtn.addEventListener('click', showDoseModal);
+  dexCard.appendChild(dexBtn);
+  app.appendChild(dexCard);
+
   // Phases
   for (const phase of PHASES) {
     const allDone = phase.items.every(i => state[i.id]);
@@ -564,58 +666,6 @@ function render() {
       noteP.textContent = phase.note;
       noteBlock.appendChild(noteP);
       phaseDiv.appendChild(noteBlock);
-    }
-
-    // Dex dose log
-    if (phase.id === 'dex') {
-      const logDiv = document.createElement('div');
-      logDiv.className = 'dose-log';
-      const logHeader = document.createElement('div');
-      logHeader.className = 'dose-log-header';
-      const logTitle = document.createElement('div');
-      logTitle.className = 'dose-log-title';
-      logTitle.textContent = 'Dose log';
-      const addBtn = document.createElement('button');
-      addBtn.className = 'log-add-btn';
-      addBtn.textContent = '+ log dose';
-      addBtn.addEventListener('click', showDoseModal);
-      logHeader.appendChild(logTitle);
-      logHeader.appendChild(addBtn);
-      logDiv.appendChild(logHeader);
-
-      const entries = getDexLog();
-      if (entries.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'log-empty';
-        empty.textContent = 'No doses logged today';
-        logDiv.appendChild(empty);
-      } else {
-        for (const entry of entries) {
-          const row = document.createElement('div');
-          row.className = 'log-entry';
-          const timeSpan = document.createElement('div');
-          timeSpan.className = 'log-entry-time';
-          timeSpan.textContent = entry.time;
-          const detail = document.createElement('div');
-          detail.className = 'log-entry-detail';
-          detail.textContent = entry.mg + ' mg';
-          const typeBadge = document.createElement('div');
-          typeBadge.className = 'log-entry-type';
-          typeBadge.textContent = entry.type;
-          const removeBtn = document.createElement('button');
-          removeBtn.className = 'log-entry-remove';
-          removeBtn.textContent = '\u00d7';
-          removeBtn.addEventListener('click', (function(ts) {
-            return function(e) { e.stopPropagation(); removeDexDose(ts); };
-          })(entry.ts));
-          row.appendChild(timeSpan);
-          row.appendChild(detail);
-          row.appendChild(typeBadge);
-          row.appendChild(removeBtn);
-          logDiv.appendChild(row);
-        }
-      }
-      phaseDiv.appendChild(logDiv);
     }
 
     app.appendChild(phaseDiv);
