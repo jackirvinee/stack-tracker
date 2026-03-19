@@ -182,22 +182,65 @@ const PHASES = [
   }
 ];
 let state = {};
+// IndexedDB for durable persistence (survives Safari ITP localStorage wipes)
+function idbOpen() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open('stack_db', 1);
+    req.onupgradeneeded = function(e) { e.target.result.createObjectStore('kv'); };
+    req.onsuccess = function(e) { resolve(e.target.result); };
+    req.onerror = function() { reject(); };
+  });
+}
+function idbGet(key) {
+  return idbOpen().then(function(db) {
+    return new Promise(function(resolve) {
+      var tx = db.transaction('kv', 'readonly');
+      var req = tx.objectStore('kv').get(key);
+      req.onsuccess = function() { resolve(req.result); };
+      req.onerror = function() { resolve(null); };
+    });
+  }).catch(function() { return null; });
+}
+function idbSet(key, val) {
+  idbOpen().then(function(db) {
+    var tx = db.transaction('kv', 'readwrite');
+    tx.objectStore('kv').put(val, key);
+  }).catch(function() {});
+}
 function loadState() {
-  const today = new Date().toDateString();
-  const raw = localStorage.getItem('stack_state');
+  var today = new Date().toDateString();
+  // Try localStorage first (sync, fast)
+  var raw = localStorage.getItem('stack_state');
   if (raw) {
     try {
-      const parsed = JSON.parse(raw);
+      var parsed = JSON.parse(raw);
       if (parsed._date === today) {
         state = parsed;
+        // Also restore to IDB in case it was stale
+        idbSet('stack_state', raw);
         return;
       }
     } catch(e) {}
   }
   state = { _date: today };
+  // Async: check IDB as fallback (if localStorage was wiped by Safari ITP)
+  idbGet('stack_state').then(function(idbRaw) {
+    if (idbRaw) {
+      try {
+        var parsed = JSON.parse(idbRaw);
+        if (parsed._date === today && Object.keys(parsed).length > Object.keys(state).length) {
+          state = parsed;
+          localStorage.setItem('stack_state', idbRaw);
+          render();
+        }
+      } catch(e) {}
+    }
+  });
 }
 function saveState() {
-  localStorage.setItem('stack_state', JSON.stringify(state));
+  var json = JSON.stringify(state);
+  localStorage.setItem('stack_state', json);
+  idbSet('stack_state', json);
 }
 function toggleItem(id) {
   if (state[id]) {
