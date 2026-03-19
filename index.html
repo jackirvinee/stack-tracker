@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Stack Tracker</title>
+
+<!-- PWA / iOS Home Screen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stack">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d0d0d">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d0d0d;--card:#161614;--border:#2a2825;--text:#e8e6e1;--muted:#6b6965;--dim:#4a4843;--accent-warm:#d4845a;--accent-gold:#bfa85a;--accent-green:#5abf7a;--accent-blue:#5a8bbf;--accent-purple:#8b5abf;--accent-pink:#bf5a7a;--done-bg:#1a2a1f;--done-text:#5abf7a}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;padding:0;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+.app{max-width:480px;margin:0 auto;padding:1rem 1rem 6rem;padding-top:max(1rem, env(safe-area-inset-top))}
+header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.5rem;padding-top:0.5rem}
+h1{font-size:1.3rem;font-weight:700;letter-spacing:-0.03em}
+.reset-btn{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);background:none;border:1px solid var(--border);padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em}
+.reset-btn:active{background:var(--border)}
+.status-bar{display:flex;gap:6px;margin-bottom:1.5rem;align-items:center}
+.progress-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent-green);border-radius:2px;transition:width 0.4s ease}
+.progress-label{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);min-width:40px;text-align:right}
+.phase{margin-bottom:1.25rem}
+.phase-header{display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;padding:0 0.25rem}
+.phase-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.phase-name{font-size:0.8rem;font-weight:700;letter-spacing:-0.01em}
+.phase-context{font-size:0.6rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-left:auto}
+.phase-done .phase-name{color:var(--muted);text-decoration:line-through}
+.item{display:flex;align-items:center;gap:10px;padding:0.65rem 0.75rem;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;cursor:pointer;transition:all 0.15s;user-select:none;-webkit-user-select:none}
+.item:active{transform:scale(0.98)}
+.item.taken{background:var(--done-bg);border-color:#1a3322}
+.check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.item.taken .check{border-color:var(--accent-green);background:var(--accent-green)}
+.check svg{opacity:0;transition:opacity 0.15s}
+.item.taken .check svg{opacity:1}
+.item-info{flex:1;min-width:0}
+.item-name{font-size:0.82rem;color:var(--text)}
+.item.taken .item-name{color:var(--done-text)}
+.item-dose{font-size:0.65rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.item-time{font-size:0.6rem;color:var(--dim);font-family:'JetBrains Mono',monospace;min-width:42px;text-align:right}
+.item.taken .item-time{color:var(--done-text)}
+.tag{font-size:0.5rem;font-family:'JetBrains Mono',monospace;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;margin-left:6px;vertical-align:middle}
+.tag-rx{background:#2a1f1a;color:#d4845a}
+.note-block{padding:0.5rem 0.75rem;margin-bottom:4px;border-left:2px solid var(--border);margin-left:0.75rem}
+.note-block p{font-size:0.7rem;color:var(--dim);line-height:1.5;font-style:italic}
+.footer-note{margin-top:2rem;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:8px}
+.footer-note h3{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem}
+.footer-note p{font-size:0.72rem;color:var(--dim);line-height:1.6}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+const PHASES = [
+  {
+    id: 'wake',
+    name: 'Wake up',
+    context: 'empty stomach',
+    color: '#d4845a',
+    items: [
+      { id: 'wellbutrin', name: 'Wellbutrin XL', dose: 'prescribed dose', rx: true },
+      { id: 'tyrosine', name: 'L-Tyrosine', dose: '500 mg \u00b7 1 cap' },
+    ],
+    note: 'Take 30 min before food. Tyrosine needs empty stomach.'
+  },
+  {
+    id: 'breakfast',
+    name: 'Breakfast',
+    context: 'with food + fat',
+    color: '#bfa85a',
+    items: [
+      { id: 'b50', name: 'B50 Complex', dose: '1 cap' },
+      { id: 'electrolytes', name: 'Electrolyte caps', dose: '2 caps' },
+      { id: 'd3', name: 'Vitamin D3', dose: '2500 IU \u00b7 1 softgel' },
+      { id: 'krill', name: 'Krill Oil', dose: '2 softgels' },
+      { id: 'magtein1', name: 'Magtein (1 of 3)', dose: '1 cap \u00b7 667 mg' },
+    ],
+    note: 'D3 + krill need fat. Eat eggs, butter, yogurt.'
+  },
+  {
+    id: 'dex',
+    name: 'Dexedrine',
+    context: 'as needed',
+    color: '#bf5a7a',
+    items: [
+      { id: 'dexxr', name: 'Dexedrine XR', dose: 'as prescribed', rx: true },
+      { id: 'dexir', name: 'Dexedrine IR', dose: 'as prescribed', rx: true },
+    ],
+    note: 'Avoid Vitamin C, citrus, coffee within 30 min of dose. IR: avoid after mid-afternoon if sleeping tonight.'
+  },
+  {
+    id: 'afternoon',
+    name: 'Afternoon',
+    context: 'with lunch / snack',
+    color: '#5abf7a',
+    items: [
+      { id: 'alcar', name: 'ALCAR', dose: '1500 mg \u00b7 1 cap' },
+    ]
+  },
+  {
+    id: 'endstim',
+    name: 'End of stim window',
+    context: 'when you stop working',
+    color: '#5a8bbf',
+    items: [
+      { id: 'nac', name: 'NAC', dose: '600 mg \u00b7 1 cap' },
+      { id: 'vitc', name: 'Vitamin C', dose: '500-1000 mg' },
+    ],
+    note: 'Vitamin C here not morning \u2014 it shortens Dex duration. Synergizes with NAC for glutathione.'
+  },
+  {
+    id: 'bed',
+    name: 'Before bed',
+    context: '30-60 min before sleep',
+    color: '#8b5abf',
+    items: [
+      { id: 'magtein23', name: 'Magtein (2+3 of 3)', dose: '2 caps \u00b7 1334 mg' },
+      { id: 'magbisgly', name: 'Mag bisglycinate powder', dose: '200-300 mg elemental' },
+    ],
+    note: 'Still take on zero-sleep nights. Magnesium does recovery work regardless.'
+  }
+];
+let state = {};
+function loadState() {
+  const today = new Date().toDateString();
+  const raw = localStorage.getItem('stack_state');
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed._date === today) {
+        state = parsed;
+        return;
+      }
+    } catch(e) {}
+  }
+  state = { _date: today };
+}
+function saveState() {
+  localStorage.setItem('stack_state', JSON.stringify(state));
+}
+function toggleItem(id) {
+  if (state[id]) {
+    delete state[id];
+  } else {
+    state[id] = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  saveState();
+  render();
+}
+function resetDay() {
+  if (confirm('Reset all doses for today?')) {
+    state = { _date: new Date().toDateString() };
+    saveState();
+    render();
+  }
+}
+function getProgress() {
+  const allItems = PHASES.flatMap(p => p.items.map(i => i.id));
+  const taken = allItems.filter(id => state[id]);
+  return { done: taken.length, total: allItems.length };
+}
+function render() {
+  const app = document.getElementById('app');
+  app.textContent = '';
+
+  const { done, total } = getProgress();
+  const pct = Math.round((done / total) * 100);
+
+  // Header
+  const header = document.createElement('header');
+  const h1 = document.createElement('h1');
+  h1.textContent = 'stack tracker';
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'reset-btn';
+  resetBtn.textContent = 'reset day';
+  resetBtn.addEventListener('click', resetDay);
+  header.appendChild(h1);
+  header.appendChild(resetBtn);
+  app.appendChild(header);
+
+  // Status bar
+  const statusBar = document.createElement('div');
+  statusBar.className = 'status-bar';
+  const track = document.createElement('div');
+  track.className = 'progress-track';
+  const fill = document.createElement('div');
+  fill.className = 'progress-fill';
+  fill.style.width = pct + '%';
+  track.appendChild(fill);
+  const label = document.createElement('div');
+  label.className = 'progress-label';
+  label.textContent = done + '/' + total;
+  statusBar.appendChild(track);
+  statusBar.appendChild(label);
+  app.appendChild(statusBar);
+
+  // Phases
+  for (const phase of PHASES) {
+    const allDone = phase.items.every(i => state[i.id]);
+    const phaseDiv = document.createElement('div');
+    phaseDiv.className = 'phase' + (allDone ? ' phase-done' : '');
+
+    const phaseHeader = document.createElement('div');
+    phaseHeader.className = 'phase-header';
+    const dot = document.createElement('div');
+    dot.className = 'phase-dot';
+    dot.style.background = phase.color;
+    const phaseName = document.createElement('div');
+    phaseName.className = 'phase-name';
+    phaseName.textContent = phase.name;
+    const phaseCtx = document.createElement('div');
+    phaseCtx.className = 'phase-context';
+    phaseCtx.textContent = phase.context;
+    phaseHeader.appendChild(dot);
+    phaseHeader.appendChild(phaseName);
+    phaseHeader.appendChild(phaseCtx);
+    phaseDiv.appendChild(phaseHeader);
+
+    for (const item of phase.items) {
+      const taken = !!state[item.id];
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'item' + (taken ? ' taken' : '');
+      itemDiv.addEventListener('click', function() { toggleItem(item.id); });
+
+      const checkDiv = document.createElement('div');
+      checkDiv.className = 'check';
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', '12');
+      svg.setAttribute('height', '12');
+      svg.setAttribute('viewBox', '0 0 12 12');
+      svg.setAttribute('fill', 'none');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M2.5 6L5 8.5L9.5 3.5');
+      path.setAttribute('stroke', '#0d0d0d');
+      path.setAttribute('stroke-width', '1.5');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(path);
+      checkDiv.appendChild(svg);
+
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'item-info';
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'item-name';
+      nameDiv.textContent = item.name;
+      if (item.rx) {
+        const tag = document.createElement('span');
+        tag.className = 'tag tag-rx';
+        tag.textContent = 'Rx';
+        nameDiv.appendChild(tag);
+      }
+      const doseDiv = document.createElement('div');
+      doseDiv.className = 'item-dose';
+      doseDiv.textContent = item.dose;
+      infoDiv.appendChild(nameDiv);
+      infoDiv.appendChild(doseDiv);
+
+      const timeDiv = document.createElement('div');
+      timeDiv.className = 'item-time';
+      timeDiv.textContent = taken ? state[item.id] : '';
+
+      itemDiv.appendChild(checkDiv);
+      itemDiv.appendChild(infoDiv);
+      itemDiv.appendChild(timeDiv);
+      phaseDiv.appendChild(itemDiv);
+    }
+
+    if (phase.note) {
+      const noteBlock = document.createElement('div');
+      noteBlock.className = 'note-block';
+      const noteP = document.createElement('p');
+      noteP.textContent = phase.note;
+      noteBlock.appendChild(noteP);
+      phaseDiv.appendChild(noteBlock);
+    }
+
+    app.appendChild(phaseDiv);
+  }
+
+  // Footer
+  const footer = document.createElement('div');
+  footer.className = 'footer-note';
+  const footerH3 = document.createElement('h3');
+  footerH3.textContent = 'Reminders';
+  const footerP = document.createElement('p');
+  footerP.textContent = 'Eat protein. Salt your food. Hydrate extra with the Wellbutrin + Dex combo. On 35hr sessions: shift "end of stim" and "before bed" to whenever you wind down. Still take mag even if not sleeping.';
+  footer.appendChild(footerH3);
+  footer.appendChild(footerP);
+  app.appendChild(footer);
+}
+loadState();
+render();
+
+// Register service worker for offline support
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>
