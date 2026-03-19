@@ -288,27 +288,22 @@ function idbSet(key, val) {
   }).catch(function() {});
 }
 function loadState() {
-  var today = new Date().toDateString();
-  // Try localStorage first (sync, fast)
+  // No auto-reset on date change — user controls day boundaries via Start/End Day
   var raw = localStorage.getItem('stack_state');
   if (raw) {
     try {
-      var parsed = JSON.parse(raw);
-      if (parsed._date === today) {
-        state = parsed;
-        // Also restore to IDB in case it was stale
-        idbSet('stack_state', raw);
-        return;
-      }
+      state = JSON.parse(raw);
+      idbSet('stack_state', raw);
+      return;
     } catch(e) {}
   }
-  state = { _date: today };
+  state = { _date: new Date().toDateString() };
   // Async: check IDB as fallback (if localStorage was wiped by Safari ITP)
   idbGet('stack_state').then(function(idbRaw) {
     if (idbRaw) {
       try {
         var parsed = JSON.parse(idbRaw);
-        if (parsed._date === today && Object.keys(parsed).length > Object.keys(state).length) {
+        if (Object.keys(parsed).length > Object.keys(state).length) {
           state = parsed;
           localStorage.setItem('stack_state', idbRaw);
           render();
@@ -331,20 +326,32 @@ function toggleItem(id) {
   saveState();
   render();
 }
-function resetDay() {
-  if (confirm('Reset all doses for today?')) {
-    state = { _date: new Date().toDateString() };
-    saveState();
-    render();
+function startDay() {
+  if (!confirm('Start a new day? This will reset all trackers.')) return;
+  var wakeTime = new Date();
+  var sleepHrs = 0;
+  // Calculate sleep if we have an end-day timestamp
+  if (state._endDay) {
+    sleepHrs = Math.round((wakeTime.getTime() - state._endDay) / 3600000 * 10) / 10;
   }
+  state = { _date: new Date().toDateString(), _wakeTime: wakeTime.getTime() };
+  if (sleepHrs > 0) state._sleep = { hours: sleepHrs };
+  saveState();
+  render();
+}
+function endDay() {
+  if (!confirm('End your day? This logs your sleep time.')) return;
+  state._endDay = Date.now();
+  saveState();
+  render();
 }
 function getDexLog() {
   return state._dexLog || [];
 }
-function addDexDose(type, mg, customTime) {
+function addDexDose(type, mg, customTime, doseTimestamp) {
   if (!state._dexLog) state._dexLog = [];
   var timeStr = customTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  var ts = Date.now();
+  var ts = doseTimestamp || Date.now();
   state._dexLog.push({ type: type, mg: mg, time: timeStr, ts: ts });
   saveState();
   render();
@@ -358,10 +365,10 @@ function removeDexDose(ts) {
 }
 // --- Caffeine log ---
 function getCafLog() { return state._cafLog || []; }
-function addCafDose(type, mg, customTime) {
+function addCafDose(type, mg, customTime, doseTimestamp) {
   if (!state._cafLog) state._cafLog = [];
   var timeStr = customTime || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  var ts = Date.now();
+  var ts = doseTimestamp || Date.now();
   state._cafLog.push({ type: type, mg: mg, time: timeStr, ts: ts });
   saveState(); render(); return ts;
 }
@@ -643,7 +650,7 @@ function showDoseModal() {
     var doseDate = new Date();
     doseDate.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0, 0);
     var displayTime = doseDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    addDexDose(typeSelect.value, mg, displayTime);
+    addDexDose(typeSelect.value, mg, displayTime, doseDate.getTime());
 
     // Schedule notifications based on IR vs XR
     if (notifCheck.checked) {
@@ -716,7 +723,7 @@ function showCafModal() {
     var d = new Date();
     d.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0, 0);
     var displayTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    addCafDose(typeSelect.value, mg, displayTime);
+    addCafDose(typeSelect.value, mg, displayTime, d.getTime());
     overlay.remove();
   });
   btns.appendChild(cancelBtn); btns.appendChild(saveBtn);
@@ -810,7 +817,7 @@ function showRecoveryModal() {
   modal.className = 'dose-modal';
   modal.style.maxWidth = '340px';
   var h3 = document.createElement('h3');
-  h3.textContent = 'Recovery Protocol';
+  h3.textContent = 'Recovery';
   h3.style.color = 'var(--accent-purple)';
   var subtitle = document.createElement('p');
   subtitle.style.cssText = 'font-size:0.7rem;color:var(--muted);margin-bottom:12px';
@@ -864,19 +871,45 @@ function render() {
   const header = document.createElement('header');
   const h1 = document.createElement('h1');
   h1.textContent = 'stack tracker';
-  const resetBtn = document.createElement('button');
-  resetBtn.className = 'reset-btn';
-  resetBtn.textContent = 'reset day';
-  resetBtn.addEventListener('click', resetDay);
+  var headerBtns = document.createElement('div');
+  headerBtns.style.cssText = 'display:flex;gap:4px';
+  if (!state._endDay) {
+    var endDayBtn = document.createElement('button');
+    endDayBtn.className = 'reset-btn';
+    endDayBtn.textContent = 'end day';
+    endDayBtn.style.color = 'var(--accent-purple)';
+    endDayBtn.style.borderColor = 'var(--accent-purple)';
+    endDayBtn.addEventListener('click', endDay);
+    headerBtns.appendChild(endDayBtn);
+  }
+  var startDayBtn = document.createElement('button');
+  startDayBtn.className = 'reset-btn';
+  startDayBtn.textContent = 'start day';
+  startDayBtn.style.color = 'var(--accent-green)';
+  startDayBtn.style.borderColor = 'var(--accent-green)';
+  startDayBtn.addEventListener('click', startDay);
+  headerBtns.appendChild(startDayBtn);
   header.appendChild(h1);
-  header.appendChild(resetBtn);
+  header.appendChild(headerBtns);
   app.appendChild(header);
 
-  // Date
+  // Date + sleep info
   const dateLine = document.createElement('div');
   dateLine.className = 'date-line';
   const now = new Date();
-  dateLine.textContent = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  var dateText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  if (state._wakeTime) {
+    var wakeT = new Date(state._wakeTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    dateText += '  ·  woke ' + wakeT;
+  }
+  if (state._sleep && state._sleep.hours > 0) {
+    dateText += '  ·  slept ' + state._sleep.hours + 'hr';
+  }
+  if (state._endDay) {
+    var bedT = new Date(state._endDay).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    dateText += '  ·  bed ' + bedT;
+  }
+  dateLine.textContent = dateText;
   app.appendChild(dateLine);
 
   // Status bar removed
@@ -983,67 +1016,6 @@ function render() {
   });
   app.appendChild(trackersDiv);
   waterGoalGlobal = waterGoal;
-
-  // Sleep tracker
-  var sleepCard = document.createElement('div');
-  sleepCard.className = 'sleep-tracker';
-  var sleepTop = document.createElement('div');
-  sleepTop.className = 'sleep-top';
-  var sleepLbl = document.createElement('div');
-  sleepLbl.className = 'sleep-label';
-  sleepLbl.textContent = 'Sleep';
-  var sleepReading = document.createElement('div');
-  sleepReading.className = 'sleep-reading';
-  var sleepHrs = getSleep();
-  var sleepStrong = document.createElement('strong');
-  sleepStrong.textContent = sleepHrs || '—';
-  var sleepColor = sleepHrs >= 7 ? 'var(--accent-green)' : sleepHrs >= 5 ? 'var(--accent-gold)' : 'var(--accent-pink)';
-  if (sleepHrs > 0) sleepStrong.style.color = sleepColor;
-  sleepReading.appendChild(sleepStrong);
-  sleepReading.appendChild(document.createTextNode(' / 8 hr'));
-  sleepTop.appendChild(sleepLbl);
-  sleepTop.appendChild(sleepReading);
-  var sleepBarWrap = document.createElement('div');
-  sleepBarWrap.className = 'sleep-bar-wrap';
-  var sleepBarFill = document.createElement('div');
-  sleepBarFill.className = 'sleep-bar-fill';
-  sleepBarFill.style.width = Math.min(100, Math.round((sleepHrs / 8) * 100)) + '%';
-  sleepBarFill.style.background = sleepColor;
-  sleepBarWrap.appendChild(sleepBarFill);
-  var sleepControls = document.createElement('div');
-  sleepControls.className = 'sleep-controls';
-  var sleepRange = document.createElement('input');
-  sleepRange.type = 'range'; sleepRange.className = 'sleep-range';
-  sleepRange.min = '0'; sleepRange.max = '12'; sleepRange.step = '0.5';
-  sleepRange.value = String(sleepHrs);
-  var sleepVal = document.createElement('div');
-  sleepVal.className = 'sleep-val';
-  sleepVal.textContent = sleepHrs > 0 ? sleepHrs + 'h' : '—';
-  sleepRange.addEventListener('input', function() {
-    sleepVal.textContent = parseFloat(sleepRange.value) + 'h';
-  });
-  sleepRange.addEventListener('change', function() {
-    setSleep(parseFloat(sleepRange.value));
-  });
-  sleepControls.appendChild(sleepRange);
-  sleepControls.appendChild(sleepVal);
-  sleepCard.appendChild(sleepTop);
-  sleepCard.appendChild(sleepBarWrap);
-  sleepCard.appendChild(sleepControls);
-  if (sleepHrs > 0 && sleepHrs < 8) {
-    var deficit = document.createElement('div');
-    deficit.className = 'sleep-deficit';
-    deficit.style.color = sleepColor;
-    deficit.textContent = 'Deficit: ' + (8 - sleepHrs) + ' hr';
-    sleepCard.appendChild(deficit);
-  } else if (sleepHrs >= 8) {
-    var wellRested = document.createElement('div');
-    wellRested.className = 'sleep-deficit';
-    wellRested.style.color = 'var(--accent-green)';
-    wellRested.textContent = 'Well rested';
-    sleepCard.appendChild(wellRested);
-  }
-  app.appendChild(sleepCard);
 
   // Dex dose tracker card
   var dexCard = document.createElement('div');
@@ -1323,7 +1295,7 @@ function render() {
     recHeader.className = 'recovery-header';
     var recTitle = document.createElement('div');
     recTitle.className = 'recovery-title';
-    recTitle.textContent = 'Recovery Protocol';
+    recTitle.textContent = 'Recovery';
     var recDone = recovery.items.filter(function(i) { return i.checked; }).length;
     var recProg = document.createElement('div');
     recProg.className = 'recovery-progress';
@@ -1361,7 +1333,7 @@ function render() {
   } else {
     var recBtn = document.createElement('button');
     recBtn.className = 'recovery-btn';
-    recBtn.textContent = 'Recovery Protocol';
+    recBtn.textContent = 'Recovery';
     recBtn.addEventListener('click', showRecoveryModal);
     app.appendChild(recBtn);
   }
