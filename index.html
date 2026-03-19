@@ -90,17 +90,21 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .notif-toggle-row{display:flex;align-items:center;gap:8px;padding:8px 0 4px;margin-bottom:4px}
 .notif-checkbox{width:16px;height:16px;accent-color:var(--accent-pink);flex-shrink:0;cursor:pointer}
 .notif-label{font-size:0.65rem;color:var(--sub);cursor:pointer;line-height:1.3}
-.trackers{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:24px}
-.tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);text-align:center}
-.tracker-label{font-size:0.5rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px}
-.tracker-value{font-size:1.4rem;font-weight:700;letter-spacing:-0.03em;margin-bottom:2px}
-.tracker-unit{font-size:0.5rem;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:8px}
-.tracker-btns{display:flex;gap:4px;justify-content:center}
-.tracker-btn{width:32px;height:28px;border:1px solid var(--border);background:var(--bg);border-radius:6px;font-size:0.85rem;font-weight:600;color:var(--sub);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.1s;font-family:'DM Sans',sans-serif}
+.trackers{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
+.tracker-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.tracker-label{font-size:0.55rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)}
+.tracker-reading{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.tracker-reading strong{font-size:0.85rem;font-weight:700;margin-right:2px}
+.tracker-bar-wrap{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:8px}
+.tracker-bar-fill{height:100%;border-radius:3px;transition:width 0.4s cubic-bezier(.4,0,.2,1)}
+.tracker-btns{display:flex;gap:4px;justify-content:flex-end}
+.tracker-btn{width:32px;height:26px;border:1px solid var(--border);background:var(--bg);border-radius:6px;font-size:0.85rem;font-weight:600;color:var(--sub);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.1s;font-family:'DM Sans',sans-serif}
 .tracker-btn:active{background:var(--border);transform:scale(0.92)}
-.tracker-water .tracker-value{color:var(--accent-blue)}
-.tracker-protein .tracker-value{color:var(--accent-warm)}
-.tracker-cal .tracker-value{color:var(--accent-purple)}
+.tracker-water .tracker-reading strong{color:var(--accent-blue)}
+.tracker-water .tracker-bar-fill{background:var(--accent-blue)}
+.tracker-protein .tracker-reading strong{color:var(--accent-warm)}
+.tracker-protein .tracker-bar-fill{background:var(--accent-warm)}
 .dex-tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
 .dex-tracker-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .dex-tracker-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-pink);font-weight:500}
@@ -475,26 +479,36 @@ function render() {
   statusBar.appendChild(label);
   app.appendChild(statusBar);
 
-  // Daily trackers
+  // Daily trackers — progress bar style
   var trackersDiv = document.createElement('div');
   trackersDiv.className = 'trackers';
   var trackerDefs = [
-    { key: 'water', label: 'Water', unit: 'glasses', step: 1, cls: 'tracker-water' },
-    { key: 'protein', label: 'Protein', unit: 'grams', step: 10, cls: 'tracker-protein' },
-    { key: 'cal', label: 'Calories', unit: 'kcal', step: 100, cls: 'tracker-cal' }
+    { key: 'water', label: 'Water', unit: 'glasses', step: 1, goal: 10, cls: 'tracker-water' },
+    { key: 'protein', label: 'Protein', unit: 'g', step: 10, goal: 150, cls: 'tracker-protein' }
   ];
   trackerDefs.forEach(function(td) {
     var t = document.createElement('div');
     t.className = 'tracker ' + td.cls;
+    var top = document.createElement('div');
+    top.className = 'tracker-top';
     var lbl = document.createElement('div');
     lbl.className = 'tracker-label';
     lbl.textContent = td.label;
-    var val = document.createElement('div');
-    val.className = 'tracker-value';
-    val.textContent = getTracker(td.key);
-    var unit = document.createElement('div');
-    unit.className = 'tracker-unit';
-    unit.textContent = td.unit;
+    var reading = document.createElement('div');
+    reading.className = 'tracker-reading';
+    var curVal = getTracker(td.key);
+    var strong = document.createElement('strong');
+    strong.textContent = curVal;
+    reading.appendChild(strong);
+    reading.appendChild(document.createTextNode(' / ' + td.goal + ' ' + td.unit));
+    top.appendChild(lbl);
+    top.appendChild(reading);
+    var barWrap = document.createElement('div');
+    barWrap.className = 'tracker-bar-wrap';
+    var barFill = document.createElement('div');
+    barFill.className = 'tracker-bar-fill';
+    barFill.style.width = Math.min(100, Math.round((curVal / td.goal) * 100)) + '%';
+    barWrap.appendChild(barFill);
     var btns = document.createElement('div');
     btns.className = 'tracker-btns';
     var minusBtn = document.createElement('button');
@@ -511,9 +525,8 @@ function render() {
     })(td.key, td.step));
     btns.appendChild(minusBtn);
     btns.appendChild(plusBtn);
-    t.appendChild(lbl);
-    t.appendChild(val);
-    t.appendChild(unit);
+    t.appendChild(top);
+    t.appendChild(barWrap);
     t.appendChild(btns);
     trackersDiv.appendChild(t);
   });
