@@ -559,6 +559,30 @@ function correctCyclePhase(correctPhaseId) {
   render();
 }
 
+// Collapsible section helper
+// stateKey: key in state to persist open/closed
+// headerEl: the header element to make clickable
+// contentEls: array of elements to show/hide
+// defaultOpen: boolean
+function makeCollapsible(stateKey, headerEl, contentEls, defaultOpen) {
+  var isOpen = state[stateKey] !== undefined ? state[stateKey] : defaultOpen;
+  var arrow = document.createElement('span');
+  arrow.style.cssText = 'font-size:0.5rem;margin-left:auto;padding-left:8px;color:var(--muted);transition:transform 0.2s';
+  arrow.textContent = isOpen ? '▾' : '▸';
+  headerEl.appendChild(arrow);
+  headerEl.style.cursor = 'pointer';
+  contentEls.forEach(function(el) {
+    el.style.display = isOpen ? '' : 'none';
+  });
+  headerEl.addEventListener('click', function() {
+    var nowOpen = contentEls[0].style.display === 'none';
+    contentEls.forEach(function(el) { el.style.display = nowOpen ? '' : 'none'; });
+    arrow.textContent = nowOpen ? '▾' : '▸';
+    state[stateKey] = nowOpen;
+    saveState();
+  });
+}
+
 function toggleItem(id) {
   if (state[id]) {
     delete state[id];
@@ -1766,6 +1790,7 @@ function render() {
   dexBtn.textContent = '+ log dex dose';
   dexBtn.addEventListener('click', showDoseModal);
   dexCard.appendChild(dexBtn);
+  makeCollapsible('_col_dex', dexHeader, [dexList, dexBtn], true);
   app.appendChild(dexCard);
 
   // Caffeine tracker
@@ -1873,6 +1898,7 @@ function render() {
   cafBtn.textContent = '+ log caffeine';
   cafBtn.addEventListener('click', showCafModal);
   cafCard.appendChild(cafBtn);
+  makeCollapsible('_col_caf', cafHeader, [cafProgWrap, cafList, cafBtn], true);
   app.appendChild(cafCard);
 
   // BFRB (hair pulling) tracker
@@ -1890,6 +1916,7 @@ function render() {
   bfrbCountEl.textContent = bfrbEntries.length > 0 ? bfrbEntries.length + ' episode' + (bfrbEntries.length !== 1 ? 's' : '') + ' today' : '';
   bfrbHeader.appendChild(bfrbTitle); bfrbHeader.appendChild(bfrbCountEl);
   bfrbCard.appendChild(bfrbHeader);
+  var bfrbContent = document.createElement('div');
 
   // Stats row if there are entries
   if (bfrbEntries.length > 0) {
@@ -1928,7 +1955,7 @@ function render() {
     statDex.appendChild(statDexVal); statDex.appendChild(statDexLbl);
 
     statsRow.appendChild(statEps); statsRow.appendChild(statInt); statsRow.appendChild(statDex);
-    bfrbCard.appendChild(statsRow);
+    bfrbContent.appendChild(statsRow);
 
     // Top trigger
     var topTrigger = Object.keys(bfrbStats.triggers).sort(function(a, b) { return bfrbStats.triggers[b] - bfrbStats.triggers[a]; })[0];
@@ -1936,7 +1963,7 @@ function render() {
       var trigTip = document.createElement('div');
       trigTip.className = 'bfrb-tip';
       trigTip.innerHTML = '<strong>Top trigger:</strong> ' + topTrigger + ' (' + bfrbStats.triggers[topTrigger] + 'x) — try a competing response next time: clench fist for 60s or hold a fidget.';
-      bfrbCard.appendChild(trigTip);
+      bfrbContent.appendChild(trigTip);
     }
   }
 
@@ -1995,13 +2022,13 @@ function render() {
       bfrbList.appendChild(row);
     });
   }
-  bfrbCard.appendChild(bfrbList);
+  bfrbContent.appendChild(bfrbList);
 
   var bfrbBtn = document.createElement('button');
   bfrbBtn.className = 'bfrb-log-btn';
   bfrbBtn.textContent = '+ log episode';
   bfrbBtn.addEventListener('click', showBfrbModal);
-  bfrbCard.appendChild(bfrbBtn);
+  bfrbContent.appendChild(bfrbBtn);
 
   // NAC reminder if episodes > 2
   if (bfrbEntries.length >= 2) {
@@ -2009,7 +2036,7 @@ function render() {
     nacTip.className = 'bfrb-tip';
     nacTip.style.marginTop = '8px';
     nacTip.innerHTML = '<strong>NAC reminder:</strong> Grant 2009 RCT found 1200mg 2x/day reduced pulling in 56% of participants. Consider a second NAC dose at bedtime.';
-    bfrbCard.appendChild(nacTip);
+    bfrbContent.appendChild(nacTip);
   }
 
   // Active pulling panic button
@@ -2017,8 +2044,10 @@ function render() {
   panicBtn.className = 'bfrb-panic-btn';
   panicBtn.textContent = '\u270b Active hair pulling \u2014 tap for help';
   panicBtn.addEventListener('click', startPanicMode);
-  bfrbCard.appendChild(panicBtn);
+  bfrbContent.appendChild(panicBtn);
 
+  bfrbCard.appendChild(bfrbContent);
+  makeCollapsible('_col_bfrb', bfrbHeader, [bfrbContent], true);
   app.appendChild(bfrbCard);
 
   // Mood / energy / focus tracker
@@ -2035,6 +2064,7 @@ function render() {
   moodCountEl.textContent = moodEntries.length > 0 ? moodEntries.length + ' check-in' + (moodEntries.length !== 1 ? 's' : '') : '';
   moodHeader.appendChild(moodTitle); moodHeader.appendChild(moodCountEl);
   moodCard.appendChild(moodHeader);
+  var moodContent = document.createElement('div');
 
   // Quick mood buttons (tap emoji = instant log with defaults)
   var moodQuick = document.createElement('div');
@@ -2052,7 +2082,7 @@ function render() {
     });
     moodQuick.appendChild(btn);
   });
-  moodCard.appendChild(moodQuick);
+  moodContent.appendChild(moodQuick);
 
   // Entries
   var moodList = document.createElement('div');
@@ -2104,13 +2134,15 @@ function render() {
       moodList.appendChild(row);
     });
   }
-  moodCard.appendChild(moodList);
+  moodContent.appendChild(moodList);
 
   var moodBtn = document.createElement('button');
   moodBtn.className = 'mood-log-btn';
   moodBtn.textContent = '+ detailed check-in';
   moodBtn.addEventListener('click', showMoodModal);
-  moodCard.appendChild(moodBtn);
+  moodContent.appendChild(moodBtn);
+  moodCard.appendChild(moodContent);
+  makeCollapsible('_col_mood', moodHeader, [moodContent], true);
   app.appendChild(moodCard);
 
   // Cycle tracker
@@ -2128,6 +2160,7 @@ function render() {
   cycleHeader.appendChild(cycleTitle);
   cycleHeader.appendChild(cycleDayLabel);
   cycleCard.appendChild(cycleHeader);
+  var cycleContent = document.createElement('div');
 
   if (currentDay) {
     var phase = getCyclePhase(currentDay);
@@ -2153,7 +2186,7 @@ function render() {
       }
       barWrap.appendChild(seg);
     });
-    cycleCard.appendChild(barWrap);
+    cycleContent.appendChild(barWrap);
 
     // Phase info card
     if (phase) {
@@ -2179,7 +2212,7 @@ function render() {
       phaseCard.appendChild(pDays);
       phaseCard.appendChild(pTip);
       phaseCard.appendChild(pHow);
-      cycleCard.appendChild(phaseCard);
+      cycleContent.appendChild(phaseCard);
 
       // Confirm / correct buttons
       var confirmRow = document.createElement('div');
@@ -2240,7 +2273,7 @@ function render() {
         confirmedText.textContent = '✓ Confirmed today';
         confirmRow.appendChild(confirmedText);
       }
-      cycleCard.appendChild(confirmRow);
+      cycleContent.appendChild(confirmRow);
     }
 
     // Next period prediction
@@ -2253,7 +2286,7 @@ function render() {
         var predictDiv = document.createElement('div');
         predictDiv.className = 'cycle-predict';
         predictDiv.textContent = 'Next period in ~' + daysUntil + ' days (' + nextP.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ')';
-        cycleCard.appendChild(predictDiv);
+        cycleContent.appendChild(predictDiv);
       }
     }
   }
@@ -2342,8 +2375,8 @@ function render() {
       state._cycleGraphOpen = open;
       saveState();
     });
-    cycleCard.appendChild(graphToggle);
-    cycleCard.appendChild(graphContainer);
+    cycleContent.appendChild(graphToggle);
+    cycleContent.appendChild(graphContainer);
   }
 
   // Log period button
@@ -2380,7 +2413,7 @@ function render() {
     modal.appendChild(btns); overlay.appendChild(modal);
     document.body.appendChild(overlay);
   });
-  cycleCard.appendChild(periodBtn);
+  cycleContent.appendChild(periodBtn);
 
   // History
   if (cycleData.periods.length > 0) {
@@ -2406,9 +2439,11 @@ function render() {
       }
       histDiv.appendChild(row);
     });
-    cycleCard.appendChild(histDiv);
+    cycleContent.appendChild(histDiv);
   }
 
+  cycleCard.appendChild(cycleContent);
+  makeCollapsible('_col_cycle', cycleHeader, [cycleContent], true);
   app.appendChild(cycleCard);
 
   // Food log
@@ -2421,6 +2456,7 @@ function render() {
   foodTitle.textContent = 'Food log';
   foodHeader.appendChild(foodTitle);
   foodCard.appendChild(foodHeader);
+  var foodContent = document.createElement('div');
   var foodEntries = getFoodLog();
   if (foodEntries.length > 0) {
     foodEntries.slice().reverse().forEach(function(entry) {
@@ -2459,7 +2495,7 @@ function render() {
       fx.textContent = '\u00d7';
       fx.addEventListener('click', (function(ts) { return function() { removeFoodEntry(ts); }; })(entry.ts));
       fe.appendChild(fx);
-      foodCard.appendChild(fe);
+      foodContent.appendChild(fe);
     });
   }
   // Nutrient coverage summary
@@ -2491,13 +2527,15 @@ function render() {
       rec.textContent = 'Missing nutrients — try: ' + suggests.join(' · ');
       summary.appendChild(rec);
     }
-    foodCard.appendChild(summary);
+    foodContent.appendChild(summary);
   }
   var foodBtn = document.createElement('button');
   foodBtn.className = 'food-add-btn';
   foodBtn.textContent = '+ log meal';
   foodBtn.addEventListener('click', showFoodModal);
-  foodCard.appendChild(foodBtn);
+  foodContent.appendChild(foodBtn);
+  foodCard.appendChild(foodContent);
+  makeCollapsible('_col_food', foodHeader, [foodContent], true);
   app.appendChild(foodCard);
 
   // Recovery protocol
