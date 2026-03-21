@@ -427,10 +427,24 @@ function toggleItem(id) {
   if (state[id]) {
     delete state[id];
   } else {
-    state[id] = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    var now = new Date();
+    state[id] = { time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), ts: now.getTime() };
   }
   saveState();
   render();
+}
+// Helper to get display time from state (handles old string format and new object format)
+function getItemTime(id) {
+  var v = state[id];
+  if (!v) return '';
+  if (typeof v === 'string') return v; // legacy format
+  return v.time || '';
+}
+function getItemTs(id) {
+  var v = state[id];
+  if (!v) return 0;
+  if (typeof v === 'string') return 0; // legacy format, no timestamp
+  return v.ts || 0;
 }
 function startDay() {
   if (!confirm('Start a new day? This will reset all trackers.')) return;
@@ -769,6 +783,52 @@ function getNowTimeString() {
   var h = d.getHours().toString().padStart(2, '0');
   var m = d.getMinutes().toString().padStart(2, '0');
   return h + ':' + m;
+}
+
+// Generic edit date/time modal for any logged entry
+// onSave(newTimestamp) is called with the new timestamp
+function showEditTimeModal(currentTs, onSave) {
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal';
+  var h3 = document.createElement('h3');
+  h3.textContent = 'Edit date & time';
+
+  var d = new Date(currentTs);
+  var dateLabel = document.createElement('label');
+  dateLabel.textContent = 'Date';
+  var dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  dateInput.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+  var timeLabel = document.createElement('label');
+  timeLabel.textContent = 'Time';
+  var timeInput = document.createElement('input');
+  timeInput.type = 'time';
+  timeInput.value = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+
+  var btns = document.createElement('div');
+  btns.className = 'dose-modal-btns';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'modal-cancel'; cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'modal-save'; saveBtn.textContent = 'Save';
+  saveBtn.addEventListener('click', function() {
+    var dp = dateInput.value.split('-');
+    var tp = timeInput.value.split(':');
+    var newDate = new Date(parseInt(dp[0],10), parseInt(dp[1],10)-1, parseInt(dp[2],10), parseInt(tp[0],10), parseInt(tp[1],10), 0, 0);
+    onSave(newDate.getTime());
+    overlay.remove();
+  });
+  btns.appendChild(cancelBtn); btns.appendChild(saveBtn);
+  modal.appendChild(h3);
+  modal.appendChild(dateLabel); modal.appendChild(dateInput);
+  modal.appendChild(timeLabel); modal.appendChild(timeInput);
+  modal.appendChild(btns); overlay.appendChild(modal);
+  document.body.appendChild(overlay);
 }
 
 function showDoseModal() {
@@ -1477,6 +1537,22 @@ function render() {
       var t = document.createElement('div');
       t.className = 'dex-log-time';
       t.textContent = entry.time;
+      t.style.cursor = 'pointer';
+      t.style.textDecoration = 'underline';
+      t.style.textDecorationStyle = 'dotted';
+      t.addEventListener('click', (function(ent) {
+        return function(ev) {
+          ev.stopPropagation();
+          showEditTimeModal(ent.ts, function(newTs) {
+            var nd = new Date(newTs);
+            var isToday = nd.toDateString() === new Date().toDateString();
+            var displayTime = nd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            ent.time = isToday ? displayTime : nd.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + displayTime;
+            ent.ts = newTs;
+            saveState(); render();
+          });
+        };
+      })(entry));
       var info = document.createElement('div');
       info.className = 'dex-log-info';
       info.textContent = entry.mg + ' mg';
@@ -1604,6 +1680,22 @@ function render() {
       row.className = 'caf-log-item';
       var ct = document.createElement('div');
       ct.className = 'caf-log-time'; ct.textContent = entry.time;
+      ct.style.cursor = 'pointer';
+      ct.style.textDecoration = 'underline';
+      ct.style.textDecorationStyle = 'dotted';
+      ct.addEventListener('click', (function(ent) {
+        return function(ev) {
+          ev.stopPropagation();
+          showEditTimeModal(ent.ts, function(newTs) {
+            var nd = new Date(newTs);
+            var isToday = nd.toDateString() === new Date().toDateString();
+            var displayTime = nd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            ent.time = isToday ? displayTime : nd.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + displayTime;
+            ent.ts = newTs;
+            saveState(); render();
+          });
+        };
+      })(entry));
       var ci = document.createElement('div');
       ci.className = 'caf-log-info'; ci.textContent = entry.mg + ' mg';
       var cb = document.createElement('div');
@@ -1725,6 +1817,22 @@ function render() {
       row.className = 'bfrb-item';
       var timeEl = document.createElement('div');
       timeEl.className = 'bfrb-item-time'; timeEl.textContent = entry.time;
+      if (entry.ts) {
+        timeEl.style.cursor = 'pointer';
+        timeEl.style.textDecoration = 'underline';
+        timeEl.style.textDecorationStyle = 'dotted';
+        timeEl.addEventListener('click', (function(ent) {
+          return function(ev) {
+            ev.stopPropagation();
+            showEditTimeModal(ent.ts, function(newTs) {
+              var nd = new Date(newTs);
+              ent.time = nd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              ent.ts = newTs;
+              saveState(); render();
+            });
+          };
+        })(entry));
+      }
       var infoEl = document.createElement('div');
       infoEl.className = 'bfrb-item-info';
       var intEl = document.createElement('div');
@@ -2073,7 +2181,22 @@ function render() {
 
       const timeDiv = document.createElement('div');
       timeDiv.className = 'item-time';
-      timeDiv.textContent = taken ? state[item.id] : '';
+      timeDiv.textContent = taken ? getItemTime(item.id) : '';
+      if (taken && getItemTs(item.id)) {
+        timeDiv.style.cursor = 'pointer';
+        timeDiv.style.textDecoration = 'underline';
+        timeDiv.style.textDecorationStyle = 'dotted';
+        timeDiv.addEventListener('click', (function(itemId) {
+          return function(ev) {
+            ev.stopPropagation();
+            showEditTimeModal(getItemTs(itemId), function(newTs) {
+              var nd = new Date(newTs);
+              state[itemId] = { time: nd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), ts: newTs };
+              saveState(); render();
+            });
+          };
+        })(item.id));
+      }
 
       itemDiv.appendChild(checkDiv);
       itemDiv.appendChild(infoDiv);
@@ -2148,7 +2271,7 @@ function showQuickLogSheet() {
       doseEl.textContent = item.dose;
       var phaseEl = document.createElement('div');
       phaseEl.className = 'quick-log-item-phase';
-      phaseEl.textContent = state[item.id] || phase.name;
+      phaseEl.textContent = getItemTime(item.id) || phase.name;
       var info = document.createElement('div');
       info.appendChild(nameEl); info.appendChild(doseEl);
       row.appendChild(check); row.appendChild(info); row.appendChild(phaseEl);
