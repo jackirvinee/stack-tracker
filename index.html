@@ -687,12 +687,19 @@ var DEX_PK = {
 // Caffeine: half-life ~5hr, effective ~6hr, fully cleared ~10hr
 var CAF_HALF_LIFE_MIN = 300;
 var CAF_EFFECTIVE_MIN = 360;
-var CAF_TYPES = {
-  'Coffee': 95, 'Espresso': 63, 'Double espresso': 126,
-  'Tea': 47, 'Energy drink': 80, 'Caffeine pill': 200,
-  'Coke': 34, 'Diet Coke': 46, 'Pepsi': 38, 'Dr Pepper': 41,
-  'Mountain Dew': 54, 'Iced tea': 25
-};
+// Quick-pick caffeine estimates (mg) for common items
+var CAF_QUICK = [
+  { label: 'Coffee', mg: 95 },
+  { label: 'Espresso', mg: 63 },
+  { label: 'Red Bull (250ml)', mg: 80 },
+  { label: 'Red Bull (355ml)', mg: 114 },
+  { label: 'Red Bull (473ml)', mg: 151 },
+  { label: 'Monster (473ml)', mg: 160 },
+  { label: 'Coke (355ml)', mg: 34 },
+  { label: 'Diet Coke (355ml)', mg: 46 },
+  { label: 'Tea', mg: 47 },
+  { label: 'Caff pill', mg: 200 }
+];
 
 // Food categories and nutrient mapping
 var FOOD_CATEGORIES = ['Protein','Leafy greens','Nuts/seeds','Dairy','Fruit','Whole grains','Fish/seafood','Red meat','Eggs','Legumes'];
@@ -888,26 +895,58 @@ function showCafModal() {
   modal.className = 'dose-modal';
   var h3 = document.createElement('h3');
   h3.textContent = 'Log caffeine';
-  var typeLabel = document.createElement('label');
-  typeLabel.textContent = 'Type';
-  var typeSelect = document.createElement('select');
-  Object.keys(CAF_TYPES).forEach(function(t) {
-    var opt = document.createElement('option');
-    opt.value = t; opt.textContent = t + ' (~' + CAF_TYPES[t] + 'mg)';
-    typeSelect.appendChild(opt);
+
+  // Free-text description
+  var descLabel = document.createElement('label');
+  descLabel.textContent = 'What did you drink?';
+  var descInput = document.createElement('input');
+  descInput.type = 'text';
+  descInput.placeholder = 'e.g. 1 medium Red Bull, 3 glasses of coke';
+  descInput.style.cssText = 'width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem;font-family:inherit;margin-bottom:4px';
+
+  // Quick-pick chips
+  var chipsWrap = document.createElement('div');
+  chipsWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px';
+  var mgInput; // forward declare so chips can reference it
+  CAF_QUICK.forEach(function(item) {
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.textContent = item.label;
+    chip.style.cssText = 'font-size:0.6rem;padding:3px 8px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;font-family:"JetBrains Mono",monospace';
+    chip.addEventListener('click', function() {
+      descInput.value = item.label;
+      mgInput.value = String(item.mg);
+      // Highlight active chip
+      chipsWrap.querySelectorAll('button').forEach(function(b) { b.style.borderColor = 'var(--border)'; b.style.color = 'var(--muted)'; });
+      chip.style.borderColor = 'var(--accent-gold)';
+      chip.style.color = 'var(--accent-gold)';
+    });
+    chipsWrap.appendChild(chip);
   });
+
+  // Caffeine mg
   var mgLabel = document.createElement('label');
   mgLabel.textContent = 'Caffeine (mg)';
-  var mgInput = document.createElement('input');
+  mgInput = document.createElement('input');
   mgInput.type = 'number'; mgInput.inputMode = 'numeric';
-  mgInput.value = String(CAF_TYPES['Coffee']); mgInput.min = '0';
-  typeSelect.addEventListener('change', function() {
-    mgInput.value = String(CAF_TYPES[typeSelect.value] || '');
-  });
+  mgInput.value = ''; mgInput.min = '0';
+  mgInput.placeholder = 'tap a quick-pick or type mg';
+
+  // Date
+  var cafDateLabel = document.createElement('label');
+  cafDateLabel.textContent = 'Date';
+  var cafDateInput = document.createElement('input');
+  cafDateInput.type = 'date';
+  var cafTodayISO = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-' + String(new Date().getDate()).padStart(2, '0');
+  cafDateInput.value = cafTodayISO;
+
+  // Time
   var timeLabel = document.createElement('label');
   timeLabel.textContent = 'Time';
   var timeInput = document.createElement('input');
   timeInput.type = 'time'; timeInput.value = getNowTimeString();
+
+  // Buttons
   var btns = document.createElement('div');
   btns.className = 'dose-modal-btns';
   var cancelBtn = document.createElement('button');
@@ -920,19 +959,32 @@ function showCafModal() {
   saveBtn.addEventListener('click', function() {
     var mg = mgInput.value.trim();
     if (!mg) { mgInput.focus(); return; }
+    var desc = descInput.value.trim() || ('Caffeine ' + mg + 'mg');
+    var dateParts = cafDateInput.value.split('-');
     var timeParts = timeInput.value.split(':');
-    var d = new Date();
-    d.setHours(parseInt(timeParts[0], 10), parseInt(timeParts[1], 10), 0, 0);
+    var d = new Date(
+      parseInt(dateParts[0], 10),
+      parseInt(dateParts[1], 10) - 1,
+      parseInt(dateParts[2], 10),
+      parseInt(timeParts[0], 10),
+      parseInt(timeParts[1], 10), 0, 0
+    );
     var displayTime = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    addCafDose(typeSelect.value, mg, displayTime, d.getTime());
+    var isToday = d.toDateString() === new Date().toDateString();
+    var cafTimeLabel = isToday ? displayTime : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + displayTime;
+    addCafDose(desc, mg, cafTimeLabel, d.getTime());
     overlay.remove();
   });
+
   btns.appendChild(cancelBtn); btns.appendChild(saveBtn);
-  modal.appendChild(h3); modal.appendChild(typeLabel); modal.appendChild(typeSelect);
+  modal.appendChild(h3);
+  modal.appendChild(descLabel); modal.appendChild(descInput);
+  modal.appendChild(chipsWrap);
   modal.appendChild(mgLabel); modal.appendChild(mgInput);
+  modal.appendChild(cafDateLabel); modal.appendChild(cafDateInput);
   modal.appendChild(timeLabel); modal.appendChild(timeInput);
   modal.appendChild(btns); overlay.appendChild(modal);
-  document.body.appendChild(overlay); mgInput.focus();
+  document.body.appendChild(overlay); descInput.focus();
 }
 
 function showBfrbModal() {
