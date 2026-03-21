@@ -249,6 +249,28 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .mood-emoji-opt.selected{border-color:var(--accent-blue);background:#f0f5ff}
 .mood-emoji-opt.selected .me-label{color:var(--accent-blue);font-weight:600}
 .caf-timer-label{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+/* Cycle tracker */
+.cycle-tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
+.cycle-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cycle-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-pink);font-weight:500}
+.cycle-day{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.cycle-phase-card{padding:12px;border-radius:10px;margin-bottom:10px}
+.cycle-phase-name{font-size:0.9rem;font-weight:700;margin-bottom:2px}
+.cycle-phase-days{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:6px}
+.cycle-phase-tip{font-size:0.7rem;line-height:1.5;opacity:0.85}
+.cycle-phase-how{font-size:0.65rem;line-height:1.5;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1);font-style:italic;opacity:0.7}
+.cycle-bar-wrap{display:flex;gap:2px;margin-bottom:10px;height:6px}
+.cycle-bar-seg{flex:1;border-radius:3px;position:relative}
+.cycle-bar-marker{position:absolute;top:-4px;width:3px;height:14px;background:#fff;border-radius:2px;box-shadow:0 0 4px rgba(255,255,255,0.5)}
+.cycle-confirm-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.cycle-confirm-btn{padding:6px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;cursor:pointer;transition:all 0.15s;border:1px solid}
+.cycle-confirm-btn:active{transform:scale(0.95)}
+.cycle-confirm-text{font-size:0.6rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.cycle-predict{font-size:0.6rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:6px}
+.cycle-log-btn{width:100%;padding:8px;border:1px dashed var(--accent-pink);background:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-pink);cursor:pointer;letter-spacing:0.03em;transition:all 0.15s;margin-top:8px}
+.cycle-log-btn:active{background:#fdf0f3}
+.cycle-history{margin-top:8px;font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--dim)}
+.cycle-history-item{padding:4px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 /* Food log */
 .food-log{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
 .food-log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -423,6 +445,120 @@ function saveState() {
   localStorage.setItem('stack_state', json);
   idbSet('stack_state', json);
 }
+// Cycle tracker - persists independently from daily state
+var cycleData = { periods: [], avgLength: 28, confirmations: [] };
+function loadCycleData() {
+  var raw = localStorage.getItem('stack_cycle');
+  if (raw) {
+    try { cycleData = JSON.parse(raw); } catch(e) {}
+  }
+  if (!cycleData.periods) cycleData.periods = [];
+  if (!cycleData.avgLength) cycleData.avgLength = 28;
+  if (!cycleData.confirmations) cycleData.confirmations = [];
+  // Also try IDB
+  idbGet('stack_cycle').then(function(idbRaw) {
+    if (idbRaw) {
+      try {
+        var parsed = JSON.parse(idbRaw);
+        if (parsed.periods && parsed.periods.length > (cycleData.periods || []).length) {
+          cycleData = parsed;
+          localStorage.setItem('stack_cycle', idbRaw);
+        }
+      } catch(e) {}
+    }
+  });
+}
+function saveCycleData() {
+  var json = JSON.stringify(cycleData);
+  localStorage.setItem('stack_cycle', json);
+  idbSet('stack_cycle', json);
+}
+// Cycle phase definitions
+var CYCLE_PHASES = [
+  { id: 'menstrual', name: 'Menstrual', dayStart: 1, dayEnd: 5, color: '#bf5a7a', bg: 'rgba(191,90,122,0.15)',
+    tip: 'Energy is lowest. She may want comfort, warmth, and low-key time together. Don\'t take moodiness personally.',
+    how: 'Bring her comfort food, offer a heating pad, suggest a cozy movie night. Less planning, more presence.' },
+  { id: 'follicular', name: 'Follicular', dayStart: 6, dayEnd: 13, color: '#5abf7a', bg: 'rgba(90,191,122,0.15)',
+    tip: 'Energy and mood are rising. She\'s more open to new experiences, socializing, and trying new things.',
+    how: 'Great time to plan dates, try new restaurants, suggest adventures. She\'s feeling optimistic and creative.' },
+  { id: 'ovulation', name: 'Ovulation', dayStart: 14, dayEnd: 16, color: '#bfa85a', bg: 'rgba(191,168,90,0.15)',
+    tip: 'Peak energy, confidence, and sociability. She feels her best and is most communicative.',
+    how: 'She\'s at her most radiant. Plan something special — she\'ll be up for it. Great time for important conversations.' },
+  { id: 'luteal', name: 'Luteal', dayStart: 17, dayEnd: 28, color: '#8b5abf', bg: 'rgba(139,90,191,0.15)',
+    tip: 'PMS territory. Mood and energy decline, especially the last week. Sensitivity increases, patience decreases.',
+    how: 'Be extra patient and thoughtful. Don\'t start arguments. Surprise her with small gestures. Give space when needed but stay attentive.' }
+];
+function getCycleDay() {
+  if (cycleData.periods.length === 0) return null;
+  var lastPeriod = cycleData.periods[cycleData.periods.length - 1];
+  var start = new Date(lastPeriod.date);
+  var now = new Date();
+  start.setHours(0,0,0,0); now.setHours(0,0,0,0);
+  var dayNum = Math.floor((now - start) / 86400000) + 1;
+  // If past the avg cycle length + buffer, she might have started a new period
+  if (dayNum > cycleData.avgLength + 7) return null;
+  return dayNum;
+}
+function getCyclePhase(dayNum) {
+  if (!dayNum) return null;
+  // Scale phases to actual cycle length
+  var ratio = cycleData.avgLength / 28;
+  for (var i = CYCLE_PHASES.length - 1; i >= 0; i--) {
+    var p = CYCLE_PHASES[i];
+    var scaledStart = Math.round(p.dayStart * ratio);
+    if (scaledStart < 1) scaledStart = 1;
+    if (dayNum >= scaledStart) return p;
+  }
+  return CYCLE_PHASES[0];
+}
+function recalcAvgCycleLength() {
+  if (cycleData.periods.length < 2) return;
+  var lengths = [];
+  for (var i = 1; i < cycleData.periods.length; i++) {
+    var prev = new Date(cycleData.periods[i-1].date);
+    var curr = new Date(cycleData.periods[i].date);
+    prev.setHours(0,0,0,0); curr.setHours(0,0,0,0);
+    var diff = Math.round((curr - prev) / 86400000);
+    if (diff > 15 && diff < 50) lengths.push(diff); // sanity check
+  }
+  if (lengths.length > 0) {
+    cycleData.avgLength = Math.round(lengths.reduce(function(a,b) { return a+b; }, 0) / lengths.length);
+  }
+}
+function logPeriodStart(dateStr) {
+  cycleData.periods.push({ date: dateStr, logged: Date.now() });
+  // Sort by date
+  cycleData.periods.sort(function(a,b) { return new Date(a.date) - new Date(b.date); });
+  recalcAvgCycleLength();
+  saveCycleData();
+  render();
+}
+function confirmCyclePhase(phaseId) {
+  cycleData.confirmations.push({ phase: phaseId, date: new Date().toISOString(), dayNum: getCycleDay() });
+  saveCycleData();
+  render();
+}
+function correctCyclePhase(correctPhaseId) {
+  // User says she's actually in a different phase — adjust the last period date
+  var dayNum = getCycleDay();
+  if (!dayNum) return;
+  var phase = CYCLE_PHASES.find(function(p) { return p.id === correctPhaseId; });
+  if (!phase) return;
+  // Calculate what day 1 should have been if she's at the middle of this phase now
+  var midDay = Math.round((phase.dayStart + phase.dayEnd) / 2);
+  var newDay1 = new Date();
+  newDay1.setDate(newDay1.getDate() - midDay + 1);
+  var dateStr = newDay1.getFullYear() + '-' + String(newDay1.getMonth()+1).padStart(2,'0') + '-' + String(newDay1.getDate()).padStart(2,'0');
+  // Update last period
+  if (cycleData.periods.length > 0) {
+    cycleData.periods[cycleData.periods.length - 1].date = dateStr;
+    cycleData.periods[cycleData.periods.length - 1].corrected = true;
+  }
+  recalcAvgCycleLength();
+  saveCycleData();
+  render();
+}
+
 function toggleItem(id) {
   if (state[id]) {
     delete state[id];
@@ -1977,6 +2113,304 @@ function render() {
   moodCard.appendChild(moodBtn);
   app.appendChild(moodCard);
 
+  // Cycle tracker
+  var cycleCard = document.createElement('div');
+  cycleCard.className = 'cycle-tracker';
+  var cycleHeader = document.createElement('div');
+  cycleHeader.className = 'cycle-header';
+  var cycleTitle = document.createElement('div');
+  cycleTitle.className = 'cycle-title';
+  cycleTitle.textContent = 'Her Cycle';
+  var cycleDayLabel = document.createElement('div');
+  cycleDayLabel.className = 'cycle-day';
+  var currentDay = getCycleDay();
+  cycleDayLabel.textContent = currentDay ? 'Day ' + currentDay + ' of ~' + cycleData.avgLength : 'No data yet';
+  cycleHeader.appendChild(cycleTitle);
+  cycleHeader.appendChild(cycleDayLabel);
+  cycleCard.appendChild(cycleHeader);
+
+  if (currentDay) {
+    var phase = getCyclePhase(currentDay);
+    // Visual bar showing position in cycle
+    var barWrap = document.createElement('div');
+    barWrap.className = 'cycle-bar-wrap';
+    var ratio = cycleData.avgLength / 28;
+    CYCLE_PHASES.forEach(function(p) {
+      var seg = document.createElement('div');
+      seg.className = 'cycle-bar-seg';
+      var scaledStart = Math.round(p.dayStart * ratio);
+      var scaledEnd = Math.round(p.dayEnd * ratio);
+      seg.style.flex = String(scaledEnd - scaledStart + 1);
+      seg.style.background = p.color;
+      seg.style.opacity = (phase && phase.id === p.id) ? '1' : '0.3';
+      // Add marker for current day position
+      if (currentDay >= scaledStart && currentDay <= scaledEnd) {
+        var marker = document.createElement('div');
+        marker.className = 'cycle-bar-marker';
+        var pct = ((currentDay - scaledStart) / (scaledEnd - scaledStart + 1)) * 100;
+        marker.style.left = Math.min(95, pct) + '%';
+        seg.appendChild(marker);
+      }
+      barWrap.appendChild(seg);
+    });
+    cycleCard.appendChild(barWrap);
+
+    // Phase info card
+    if (phase) {
+      var phaseCard = document.createElement('div');
+      phaseCard.className = 'cycle-phase-card';
+      phaseCard.style.background = phase.bg;
+      var pName = document.createElement('div');
+      pName.className = 'cycle-phase-name';
+      pName.style.color = phase.color;
+      pName.textContent = phase.name + ' phase';
+      var pDays = document.createElement('div');
+      pDays.className = 'cycle-phase-days';
+      var scaledS = Math.round(phase.dayStart * ratio);
+      var scaledE = Math.round(phase.dayEnd * ratio);
+      pDays.textContent = 'Days ' + scaledS + '–' + scaledE + ' · currently day ' + currentDay;
+      var pTip = document.createElement('div');
+      pTip.className = 'cycle-phase-tip';
+      pTip.textContent = phase.tip;
+      var pHow = document.createElement('div');
+      pHow.className = 'cycle-phase-how';
+      pHow.textContent = phase.how;
+      phaseCard.appendChild(pName);
+      phaseCard.appendChild(pDays);
+      phaseCard.appendChild(pTip);
+      phaseCard.appendChild(pHow);
+      cycleCard.appendChild(phaseCard);
+
+      // Confirm / correct buttons
+      var confirmRow = document.createElement('div');
+      confirmRow.className = 'cycle-confirm-row';
+      // Check if already confirmed today
+      var todayStr = new Date().toDateString();
+      var confirmedToday = cycleData.confirmations.some(function(c) {
+        return new Date(c.date).toDateString() === todayStr;
+      });
+      if (!confirmedToday) {
+        var confirmBtn = document.createElement('button');
+        confirmBtn.className = 'cycle-confirm-btn';
+        confirmBtn.style.borderColor = phase.color;
+        confirmBtn.style.color = phase.color;
+        confirmBtn.style.background = 'none';
+        confirmBtn.textContent = 'Looks right';
+        confirmBtn.addEventListener('click', function() { confirmCyclePhase(phase.id); });
+        var wrongBtn = document.createElement('button');
+        wrongBtn.className = 'cycle-confirm-btn';
+        wrongBtn.style.borderColor = 'var(--border)';
+        wrongBtn.style.color = 'var(--muted)';
+        wrongBtn.style.background = 'none';
+        wrongBtn.textContent = 'Not quite';
+        wrongBtn.addEventListener('click', function() {
+          // Show phase picker
+          var overlay = document.createElement('div');
+          overlay.className = 'dose-modal-overlay';
+          overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+          var modal = document.createElement('div');
+          modal.className = 'dose-modal';
+          var mh = document.createElement('h3');
+          mh.textContent = 'What phase seems right?';
+          modal.appendChild(mh);
+          CYCLE_PHASES.forEach(function(cp) {
+            var btn = document.createElement('button');
+            btn.style.cssText = 'display:block;width:100%;padding:12px;margin:4px 0;border:1px solid ' + cp.color + ';background:' + cp.bg + ';border-radius:8px;font-size:0.8rem;font-weight:600;color:' + cp.color + ';cursor:pointer;text-align:left';
+            btn.innerHTML = '<strong>' + cp.name + '</strong><br><span style="font-size:0.65rem;font-weight:400;opacity:0.8">' + cp.tip.split('.')[0] + '</span>';
+            btn.addEventListener('click', function() {
+              correctCyclePhase(cp.id);
+              overlay.remove();
+            });
+            modal.appendChild(btn);
+          });
+          var cancelBtn = document.createElement('button');
+          cancelBtn.className = 'modal-cancel';
+          cancelBtn.textContent = 'Cancel';
+          cancelBtn.style.marginTop = '8px';
+          cancelBtn.addEventListener('click', function() { overlay.remove(); });
+          modal.appendChild(cancelBtn);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+        });
+        confirmRow.appendChild(confirmBtn);
+        confirmRow.appendChild(wrongBtn);
+      } else {
+        var confirmedText = document.createElement('div');
+        confirmedText.className = 'cycle-confirm-text';
+        confirmedText.textContent = '✓ Confirmed today';
+        confirmRow.appendChild(confirmedText);
+      }
+      cycleCard.appendChild(confirmRow);
+    }
+
+    // Next period prediction
+    if (cycleData.periods.length > 0) {
+      var lastP = new Date(cycleData.periods[cycleData.periods.length - 1].date);
+      var nextP = new Date(lastP);
+      nextP.setDate(nextP.getDate() + cycleData.avgLength);
+      var daysUntil = Math.ceil((nextP - new Date()) / 86400000);
+      if (daysUntil > 0) {
+        var predictDiv = document.createElement('div');
+        predictDiv.className = 'cycle-predict';
+        predictDiv.textContent = 'Next period in ~' + daysUntil + ' days (' + nextP.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ')';
+        cycleCard.appendChild(predictDiv);
+      }
+    }
+  }
+
+  // Collapsible cycle graph
+  if (currentDay) {
+    var graphToggle = document.createElement('button');
+    graphToggle.style.cssText = 'width:100%;padding:6px;border:none;background:none;font-family:"JetBrains Mono",monospace;font-size:0.55rem;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;margin-top:4px';
+    var graphExpanded = state._cycleGraphOpen || false;
+    graphToggle.innerHTML = (graphExpanded ? '▾' : '▸') + ' Cycle overview';
+    var graphContainer = document.createElement('div');
+    graphContainer.style.display = graphExpanded ? 'block' : 'none';
+
+    // Build SVG hormone curve
+    var svgW = 320, svgH = 140, padL = 30, padR = 10, padT = 10, padB = 25;
+    var plotW = svgW - padL - padR, plotH = svgH - padT - padB;
+    var svg = '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" style="width:100%;height:auto;margin-top:8px">';
+    // Grid lines
+    svg += '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (padL + plotW) + '" y2="' + (padT + plotH) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+    svg += '<line x1="' + padL + '" y1="' + padT + '" x2="' + padL + '" y2="' + (padT + plotH) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+
+    // Estrogen curve (rises follicular, peaks ovulation, drops luteal)
+    var estrogenPts = [
+      [0, 0.2], [0.1, 0.25], [0.2, 0.4], [0.3, 0.6], [0.4, 0.8],
+      [0.48, 0.95], [0.5, 1.0], [0.52, 0.95], [0.55, 0.7], [0.6, 0.55],
+      [0.65, 0.6], [0.7, 0.55], [0.8, 0.45], [0.9, 0.3], [1.0, 0.2]
+    ];
+    // Progesterone curve (low until after ovulation, peaks mid-luteal)
+    var progPts = [
+      [0, 0.05], [0.1, 0.05], [0.2, 0.05], [0.3, 0.05], [0.4, 0.1],
+      [0.5, 0.15], [0.55, 0.3], [0.6, 0.55], [0.65, 0.75], [0.7, 0.85],
+      [0.75, 0.9], [0.8, 0.8], [0.85, 0.6], [0.9, 0.35], [1.0, 0.1]
+    ];
+    // Energy curve
+    var energyPts = [
+      [0, 0.25], [0.1, 0.3], [0.15, 0.35], [0.2, 0.5], [0.3, 0.65],
+      [0.4, 0.8], [0.48, 0.9], [0.5, 0.95], [0.55, 0.85], [0.6, 0.7],
+      [0.65, 0.6], [0.7, 0.5], [0.8, 0.4], [0.9, 0.3], [1.0, 0.25]
+    ];
+
+    function ptsToPath(pts, color, opacity) {
+      var path = 'M';
+      pts.forEach(function(p, i) {
+        var x = padL + p[0] * plotW;
+        var y = padT + plotH - p[1] * plotH;
+        path += (i === 0 ? '' : ' L') + x.toFixed(1) + ' ' + y.toFixed(1);
+      });
+      return '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="1.5" opacity="' + opacity + '"/>';
+    }
+    svg += ptsToPath(estrogenPts, '#bf5a7a', 0.8);
+    svg += ptsToPath(progPts, '#8b5abf', 0.8);
+    svg += ptsToPath(energyPts, '#5abf7a', 0.6);
+
+    // Phase backgrounds
+    var phRatio = cycleData.avgLength / 28;
+    CYCLE_PHASES.forEach(function(p) {
+      var x1 = padL + ((p.dayStart - 1) / cycleData.avgLength) * plotW;
+      var x2 = padL + (p.dayEnd / cycleData.avgLength) * plotW;
+      svg += '<rect x="' + x1 + '" y="' + padT + '" width="' + (x2 - x1) + '" height="' + plotH + '" fill="' + p.color + '" opacity="0.06"/>';
+      // Phase label
+      var midX = (x1 + x2) / 2;
+      svg += '<text x="' + midX + '" y="' + (padT + plotH + 14) + '" text-anchor="middle" fill="' + p.color + '" font-size="7" font-family="JetBrains Mono,monospace" opacity="0.7">' + p.name.slice(0, 4) + '</text>';
+    });
+
+    // Current day marker
+    var dayX = padL + ((currentDay - 1) / cycleData.avgLength) * plotW;
+    svg += '<line x1="' + dayX + '" y1="' + padT + '" x2="' + dayX + '" y2="' + (padT + plotH) + '" stroke="#ffffff" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>';
+    svg += '<circle cx="' + dayX + '" cy="' + (padT - 2) + '" r="3" fill="#ffffff"/>';
+    svg += '<text x="' + dayX + '" y="' + (padT - 7) + '" text-anchor="middle" fill="#ffffff" font-size="7" font-family="JetBrains Mono,monospace">Day ' + currentDay + '</text>';
+
+    // Legend
+    svg += '<circle cx="' + (padL + 5) + '" cy="' + (padT + 6) + '" r="3" fill="#bf5a7a"/>';
+    svg += '<text x="' + (padL + 12) + '" y="' + (padT + 9) + '" fill="#bf5a7a" font-size="6.5" font-family="JetBrains Mono,monospace" opacity="0.8">Estrogen</text>';
+    svg += '<circle cx="' + (padL + 60) + '" cy="' + (padT + 6) + '" r="3" fill="#8b5abf"/>';
+    svg += '<text x="' + (padL + 67) + '" y="' + (padT + 9) + '" fill="#8b5abf" font-size="6.5" font-family="JetBrains Mono,monospace" opacity="0.8">Progesterone</text>';
+    svg += '<circle cx="' + (padL + 130) + '" cy="' + (padT + 6) + '" r="3" fill="#5abf7a"/>';
+    svg += '<text x="' + (padL + 137) + '" y="' + (padT + 9) + '" fill="#5abf7a" font-size="6.5" font-family="JetBrains Mono,monospace" opacity="0.8">Energy</text>';
+
+    svg += '</svg>';
+    graphContainer.innerHTML = svg;
+
+    graphToggle.addEventListener('click', function() {
+      var open = graphContainer.style.display === 'none';
+      graphContainer.style.display = open ? 'block' : 'none';
+      graphToggle.innerHTML = (open ? '▾' : '▸') + ' Cycle overview';
+      state._cycleGraphOpen = open;
+      saveState();
+    });
+    cycleCard.appendChild(graphToggle);
+    cycleCard.appendChild(graphContainer);
+  }
+
+  // Log period button
+  var periodBtn = document.createElement('button');
+  periodBtn.className = 'cycle-log-btn';
+  periodBtn.textContent = '+ log period start';
+  periodBtn.addEventListener('click', function() {
+    var overlay = document.createElement('div');
+    overlay.className = 'dose-modal-overlay';
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    var modal = document.createElement('div');
+    modal.className = 'dose-modal';
+    var mh = document.createElement('h3');
+    mh.textContent = 'Log period start';
+    var dl = document.createElement('label');
+    dl.textContent = 'Start date';
+    var di = document.createElement('input');
+    di.type = 'date';
+    var todayISO = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0') + '-' + String(new Date().getDate()).padStart(2,'0');
+    di.value = todayISO;
+    var btns = document.createElement('div');
+    btns.className = 'dose-modal-btns';
+    var cb = document.createElement('button');
+    cb.className = 'modal-cancel'; cb.textContent = 'Cancel';
+    cb.addEventListener('click', function() { overlay.remove(); });
+    var sb = document.createElement('button');
+    sb.className = 'modal-save'; sb.textContent = 'Log';
+    sb.style.background = 'var(--accent-pink)';
+    sb.addEventListener('click', function() {
+      if (di.value) { logPeriodStart(di.value); overlay.remove(); }
+    });
+    btns.appendChild(cb); btns.appendChild(sb);
+    modal.appendChild(mh); modal.appendChild(dl); modal.appendChild(di);
+    modal.appendChild(btns); overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  });
+  cycleCard.appendChild(periodBtn);
+
+  // History
+  if (cycleData.periods.length > 0) {
+    var histDiv = document.createElement('div');
+    histDiv.className = 'cycle-history';
+    cycleData.periods.slice().reverse().slice(0, 6).forEach(function(p, i) {
+      var row = document.createElement('div');
+      row.className = 'cycle-history-item';
+      var dStr = new Date(p.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      var left = document.createElement('span');
+      left.textContent = dStr;
+      row.appendChild(left);
+      if (i < cycleData.periods.length - 1 && cycleData.periods.length >= 2) {
+        var idx = cycleData.periods.length - 1 - i;
+        if (idx > 0) {
+          var prev = new Date(cycleData.periods[idx - 1].date);
+          var curr = new Date(cycleData.periods[idx].date);
+          var len = Math.round((curr - prev) / 86400000);
+          var right = document.createElement('span');
+          right.textContent = len + ' day cycle';
+          row.appendChild(right);
+        }
+      }
+      histDiv.appendChild(row);
+    });
+    cycleCard.appendChild(histDiv);
+  }
+
+  app.appendChild(cycleCard);
+
   // Food log
   var foodCard = document.createElement('div');
   foodCard.className = 'food-log';
@@ -2583,6 +3017,7 @@ function updateSky() {
 fetchSunTimes();
 
 loadState();
+loadCycleData();
 render();
 
 // Auto-refresh every 60s for timers
