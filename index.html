@@ -938,6 +938,188 @@ function scheduleFocusNotifs(doseTimeMs, type) {
   });
 }
 
+// --- Background reminder system (runs while app is open) ---
+var reminderInterval = null;
+var lastWaterRemind = 0;
+var lastSupplementRemind = 0;
+var lastSleepAsk = 0;
+
+function startReminderLoop() {
+  if (reminderInterval) return;
+  reminderInterval = setInterval(checkReminders, 60000); // check every minute
+}
+
+function checkReminders() {
+  if (Notification.permission !== 'granted') return;
+  var now = Date.now();
+  var hour = new Date().getHours();
+
+  // --- Water reminders: every 90 min after a Dex dose while stim is active ---
+  var dexLog = state._dexLog || [];
+  var dexActive = dexLog.some(function(d) {
+    var pk = DEX_PK[d.type] || DEX_PK.XR;
+    return (now - d.ts) < pk.totalMin * 60000;
+  });
+  var waterMl = state._water || 0;
+  var waterGoal = state._waterGoal || 3000;
+  var waterPct = Math.round((waterMl / waterGoal) * 100);
+
+  if (dexActive && waterPct < 100 && (now - lastWaterRemind) > 90 * 60000) {
+    var mlLeft = waterGoal - waterMl;
+    sendNotif('Hydrate', 'Stims active — drink water. ' + mlLeft + 'ml left to hit your goal (' + waterPct + '% done).');
+    lastWaterRemind = now;
+  } else if (!dexActive && waterPct < 60 && (now - lastWaterRemind) > 120 * 60000) {
+    sendNotif('Drink water', 'You\'re at ' + waterPct + '% of your water goal.');
+    lastWaterRemind = now;
+  }
+
+  // --- Supplement reminders based on time windows ---
+  if ((now - lastSupplementRemind) > 180 * 60000) { // max every 3 hours
+    var untaken = [];
+    PHASES.forEach(function(phase) {
+      phase.items.forEach(function(item) {
+        if (!state[item.id]) untaken.push(item.name);
+      });
+    });
+
+    if (untaken.length > 0) {
+      // Morning: remind about wake/breakfast phases
+      if (hour >= 7 && hour <= 11) {
+        var morningUntaken = [];
+        ['wake', 'breakfast'].forEach(function(pid) {
+          var phase = PHASES.find(function(p) { return p.id === pid; });
+          if (phase) phase.items.forEach(function(i) { if (!state[i.id]) morningUntaken.push(i.name); });
+        });
+        if (morningUntaken.length > 0) {
+          sendNotif('Morning supplements', morningUntaken.join(', '));
+          lastSupplementRemind = now;
+        }
+      }
+      // Afternoon: ALCAR
+      if (hour >= 12 && hour <= 15) {
+        var phase = PHASES.find(function(p) { return p.id === 'afternoon'; });
+        if (phase) {
+          var afternoonUntaken = [];
+          phase.items.forEach(function(i) { if (!state[i.id]) afternoonUntaken.push(i.name); });
+          if (afternoonUntaken.length > 0) {
+            sendNotif('Afternoon supplements', afternoonUntaken.join(', '));
+            lastSupplementRemind = now;
+          }
+        }
+      }
+      // End of stim: NAC + Vitamin C (only if dex was taken and is tapering)
+      if (dexLog.length > 0 && !dexActive) {
+        var endPhase = PHASES.find(function(p) { return p.id === 'endstim'; });
+        if (endPhase) {
+          var endUntaken = [];
+          endPhase.items.forEach(function(i) { if (!state[i.id]) endUntaken.push(i.name); });
+          if (endUntaken.length > 0) {
+            sendNotif('Stim window closed', 'Take: ' + endUntaken.join(', ') + ' — NAC restores glutathione, Vitamin C clears residual Dex.');
+            lastSupplementRemind = now;
+          }
+        }
+      }
+      // Bedtime: magnesium (after 9 PM or after end-day)
+      if (hour >= 21 || state._endDay) {
+        var bedPhase = PHASES.find(function(p) { return p.id === 'bed'; });
+        if (bedPhase) {
+          var bedUntaken = [];
+          bedPhase.items.forEach(function(i) { if (!state[i.id]) bedUntaken.push(i.name); });
+          if (bedUntaken.length > 0) {
+            sendNotif('Bedtime supplements', bedUntaken.join(', ') + ' — magnesium blocks NMDA tolerance buildup.');
+            lastSupplementRemind = now;
+          }
+        }
+      }
+    }
+  }
+
+  // --- Dex wearing off / redose reminders ---
+  dexLog.forEach(function(d) {
+    var pk = DEX_PK[d.type] || DEX_PK.XR;
+    var elapsed = (now - d.ts) / 60000;
+    var warnAt = pk.totalMin - 30; // 30 min before wearing off
+    var wornOff = pk.totalMin;
+    var tagBase = 'dex-warn-' + d.ts;
+
+    // 30 min warning before wearing off
+    if (elapsed >= warnAt && elapsed < warnAt + 2 && !state['_notif_' + tagBase]) {
+      sendNotif(d.type + ' wearing off in 30 min', 'Finish priority tasks. Eat protein + drink water. Consider a booster IR dose if you need more hours.');
+      state['_notif_' + tagBase] = true;
+      saveState();
+    }
+    // Worn off
+    if (elapsed >= wornOff && elapsed < wornOff + 2 && !state['_notif_' + tagBase + '_off']) {
+      var anyOtherActive = dexLog.some(function(other) {
+        if (other.ts === d.ts) return false;
+        var otherPk = DEX_PK[other.type] || DEX_PK.XR;
+        return (now - other.ts) < otherPk.totalMin * 60000;
+      });
+      if (!anyOtherActive) {
+        sendNotif(d.type + ' has worn off', 'No active stims. Take NAC + Vitamin C now. Eat a full meal with protein. Take a break before redosing.');
+      } else {
+        sendNotif(d.type + ' dose finished', 'Another dose is still active. Stay hydrated.');
+      }
+      state['_notif_' + tagBase + '_off'] = true;
+      saveState();
+    }
+  });
+
+  // --- Caffeine crash warning ---
+  var cafLog = state._cafLog || [];
+  cafLog.forEach(function(c) {
+    var elapsed = (now - c.ts) / 60000;
+    // Caffeine effective period ~6 hours, warn at 5 hours
+    if (elapsed >= 300 && elapsed < 302 && !state['_notif_caf_' + c.ts]) {
+      sendNotif('Caffeine wearing off', c.mg + 'mg from ' + c.time + ' is fading. Drink water, not more coffee — avoid the crash-redose cycle.');
+      state['_notif_caf_' + c.ts] = true;
+      saveState();
+    }
+  });
+
+  // --- Crash prevention on big work days ---
+  var totalDexMg = 0;
+  var totalCafMg = 0;
+  dexLog.forEach(function(d) { totalDexMg += parseFloat(d.mg) || 0; });
+  cafLog.forEach(function(c) { totalCafMg += parseFloat(c.mg) || 0; });
+  var hoursAwake = state._wakeTime ? (now - state._wakeTime) / 3600000 : 0;
+
+  // If awake 12+ hours with high stim load, remind about crash prep
+  if (hoursAwake >= 12 && (totalDexMg > 20 || totalCafMg > 200) && !state._crashWarnSent) {
+    sendNotif('Big day — prep for the crash', hoursAwake.toFixed(0) + ' hours awake, ' + totalDexMg + 'mg Dex + ' + totalCafMg + 'mg caffeine today. Eat a big meal, take your mag + NAC, plan your wind-down.');
+    state._crashWarnSent = true;
+    saveState();
+  }
+  // If awake 18+ hours, serious warning
+  if (hoursAwake >= 18 && !state._extendedWarnSent) {
+    sendNotif('Extended session: 18+ hours', 'High cognitive debt building. If you can sleep, start your end-day routine. If not, eat, hydrate, take magnesium anyway — it protects regardless of sleep.');
+    state._extendedWarnSent = true;
+    saveState();
+  }
+
+  // --- Sleep planning question: once per evening ---
+  if (hour >= 20 && hour <= 23 && !state._endDay && (now - lastSleepAsk) > 6 * 3600000) {
+    sendNotif('Sleep tonight?', 'Planning to sleep? Tap "End Day" to start your wind-down. Magnesium + melatonin need 30-60 min lead time.');
+    lastSleepAsk = now;
+  }
+
+  // --- Protein reminder: if it's been 3+ hours since wake and protein is low ---
+  var proteinG = state._protein || 0;
+  var proteinGoal = state._proteinGoal || 150;
+  if (proteinG < proteinGoal * 0.3 && state._wakeTime && (now - state._wakeTime) > 3 * 3600000) {
+    if ((now - (state._lastProteinRemind || 0)) > 3 * 3600000) {
+      sendNotif('Eat protein', 'Only ' + proteinG + 'g so far. Dex depletes amino acids. Eat eggs, chicken, yogurt, or a shake.');
+      state._lastProteinRemind = now;
+      saveState();
+    }
+  }
+}
+
+// Start the reminder loop on app load
+if ('Notification' in window) {
+  startReminderLoop();
+}
+
 function getNowTimeString() {
   var d = new Date();
   var h = d.getHours().toString().padStart(2, '0');
