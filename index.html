@@ -625,6 +625,43 @@ function endDay() {
   saveState();
   render();
 }
+function exportData() {
+  var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'stack-tracker-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.addEventListener('change', function() {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var imported = JSON.parse(e.target.result);
+        if (!imported || typeof imported !== 'object') {
+          alert('Invalid backup file.');
+          return;
+        }
+        if (!confirm('Replace all current data with this backup?')) return;
+        state = imported;
+        saveState();
+        render();
+        alert('Data restored successfully.');
+      } catch(err) {
+        alert('Could not read file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+  input.click();
+}
 function getDexLog() {
   return state._dexLog || [];
 }
@@ -1766,6 +1803,21 @@ function render() {
   startDayBtn.style.borderColor = 'var(--accent-green)';
   startDayBtn.addEventListener('click', startDay);
   headerBtns.appendChild(startDayBtn);
+  // Data export/import buttons
+  var exportBtn = document.createElement('button');
+  exportBtn.className = 'reset-btn';
+  exportBtn.textContent = '\u2b07';
+  exportBtn.title = 'Export data backup';
+  exportBtn.style.fontSize = '0.8rem';
+  exportBtn.addEventListener('click', exportData);
+  headerBtns.appendChild(exportBtn);
+  var importBtn = document.createElement('button');
+  importBtn.className = 'reset-btn';
+  importBtn.textContent = '\u2b06';
+  importBtn.title = 'Import data backup';
+  importBtn.style.fontSize = '0.8rem';
+  importBtn.addEventListener('click', importData);
+  headerBtns.appendChild(importBtn);
   header.appendChild(h1);
   header.appendChild(headerBtns);
   app.appendChild(header);
