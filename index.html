@@ -890,11 +890,73 @@ var NUTRIENT_MAP = {
   'Legumes':      { nutrients: ['fiber','iron','folate','protein'], suggest: 'lentils, chickpeas, black beans' }
 };
 
+// --- Server push subscription + state sync ---
+var API_BASE = '/api'; // Same origin on Vercel
+var VAPID_PUBLIC = 'BIpnGWrZ35K4xmCKvhpB8ZMkyGbd0nmgqzwiNd6NNA4seH9tRZSBmg-HopVjTXc_P0jVwR7FgazmE3g_rTxNf1c';
+
+function urlBase64ToUint8Array(base64String) {
+  var padding = '='.repeat((4 - base64String.length % 4) % 4);
+  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var rawData = atob(base64);
+  var arr = new Uint8Array(rawData.length);
+  for (var i = 0; i < rawData.length; ++i) arr[i] = rawData.charCodeAt(i);
+  return arr;
+}
+
+function subscribeToPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  navigator.serviceWorker.ready.then(function(reg) {
+    return reg.pushManager.getSubscription().then(function(sub) {
+      if (sub) return sub; // Already subscribed
+      return reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
+      });
+    });
+  }).then(function(sub) {
+    if (!sub) return;
+    // Send subscription to server
+    fetch(API_BASE + '/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON() })
+    }).catch(function(e) { console.log('Push subscribe sync failed:', e); });
+  }).catch(function(e) { console.log('Push subscription failed:', e); });
+}
+
+// Sync state to server for cron-based notifications
+var syncTimer = null;
+function syncStateToServer() {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(function() {
+    fetch(API_BASE + '/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: state })
+    }).catch(function(e) { console.log('State sync failed:', e); });
+  }, 2000); // Debounce 2 seconds
+}
+
+// Patch saveState to also sync to server
+var _origSaveState = saveState;
+saveState = function() {
+  _origSaveState();
+  syncStateToServer();
+};
+
+// Subscribe on load if permission granted
+if ('Notification' in window && Notification.permission === 'granted') {
+  subscribeToPush();
+}
+
 function requestNotifPermission() {
   if (!('Notification' in window)) return Promise.resolve('denied');
   if (Notification.permission === 'granted') return Promise.resolve('granted');
   if (Notification.permission === 'denied') return Promise.resolve('denied');
-  return Notification.requestPermission();
+  return Notification.requestPermission().then(function(result) {
+    if (result === 'granted') subscribeToPush();
+    return result;
+  });
 }
 
 function sendNotif(title, body) {

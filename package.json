@@ -1,0 +1,25 @@
+{
+  "name": "supplement-stack-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jackirvinee/stack-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jackirvinee/stack-tracker/issues"
+  },
+  "homepage": "https://github.com/jackirvinee/stack-tracker#readme",
+  "dependencies": {
+    "@upstash/redis": "^1.37.0",
+    "web-push": "^3.6.7"
+  }
+}

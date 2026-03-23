@@ -32,6 +32,26 @@ self.addEventListener('fetch', e => {
   );
 });
 
+// Handle server-sent push notifications (works even when app is closed/locked)
+self.addEventListener('push', e => {
+  if (!e.data) return;
+  try {
+    const data = e.data.json();
+    const options = {
+      body: data.body || '',
+      icon: 'icons/icon-192.png',
+      badge: 'icons/icon-192.png',
+      tag: (data.title || 'stack').replace(/\s+/g, '-').toLowerCase(),
+      renotify: true,
+      requireInteraction: false
+    };
+    e.waitUntil(self.registration.showNotification(data.title || 'Stack Tracker', options));
+  } catch (err) {
+    // Fallback for plain text
+    e.waitUntil(self.registration.showNotification('Stack Tracker', { body: e.data.text() }));
+  }
+});
+
 // Handle notification clicks - open or focus the app
 self.addEventListener('notificationclick', e => {
   e.notification.close();
