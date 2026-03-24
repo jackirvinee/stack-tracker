@@ -249,28 +249,6 @@ h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.04em;color:var(--text)}
 .mood-emoji-opt.selected{border-color:var(--accent-blue);background:#f0f5ff}
 .mood-emoji-opt.selected .me-label{color:var(--accent-blue);font-weight:600}
 .caf-timer-label{font-size:0.48rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
-/* Cycle tracker */
-.cycle-tracker{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
-.cycle-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.cycle-title{font-size:0.6rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent-pink);font-weight:500}
-.cycle-day{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted)}
-.cycle-phase-card{padding:12px;border-radius:10px;margin-bottom:10px}
-.cycle-phase-name{font-size:0.9rem;font-weight:700;margin-bottom:2px}
-.cycle-phase-days{font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:6px}
-.cycle-phase-tip{font-size:0.7rem;line-height:1.5;opacity:0.85}
-.cycle-phase-how{font-size:0.65rem;line-height:1.5;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1);font-style:italic;opacity:0.7}
-.cycle-bar-wrap{display:flex;gap:2px;margin-bottom:10px;height:6px}
-.cycle-bar-seg{flex:1;border-radius:3px;position:relative}
-.cycle-bar-marker{position:absolute;top:-4px;width:3px;height:14px;background:#fff;border-radius:2px;box-shadow:0 0 4px rgba(255,255,255,0.5)}
-.cycle-confirm-row{display:flex;align-items:center;gap:8px;margin-top:8px}
-.cycle-confirm-btn{padding:6px 14px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;cursor:pointer;transition:all 0.15s;border:1px solid}
-.cycle-confirm-btn:active{transform:scale(0.95)}
-.cycle-confirm-text{font-size:0.6rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
-.cycle-predict{font-size:0.6rem;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:6px}
-.cycle-log-btn{width:100%;padding:8px;border:1px dashed var(--accent-pink);background:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--accent-pink);cursor:pointer;letter-spacing:0.03em;transition:all 0.15s;margin-top:8px}
-.cycle-log-btn:active{background:#fdf0f3}
-.cycle-history{margin-top:8px;font-size:0.55rem;font-family:'JetBrains Mono',monospace;color:var(--dim)}
-.cycle-history-item{padding:4px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 /* Food log */
 .food-log{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:24px}
 .food-log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -445,120 +423,6 @@ function saveState() {
   localStorage.setItem('stack_state', json);
   idbSet('stack_state', json);
 }
-// Cycle tracker - persists independently from daily state
-var cycleData = { periods: [], avgLength: 28, confirmations: [] };
-function loadCycleData() {
-  var raw = localStorage.getItem('stack_cycle');
-  if (raw) {
-    try { cycleData = JSON.parse(raw); } catch(e) {}
-  }
-  if (!cycleData.periods) cycleData.periods = [];
-  if (!cycleData.avgLength) cycleData.avgLength = 28;
-  if (!cycleData.confirmations) cycleData.confirmations = [];
-  // Also try IDB
-  idbGet('stack_cycle').then(function(idbRaw) {
-    if (idbRaw) {
-      try {
-        var parsed = JSON.parse(idbRaw);
-        if (parsed.periods && parsed.periods.length > (cycleData.periods || []).length) {
-          cycleData = parsed;
-          localStorage.setItem('stack_cycle', idbRaw);
-        }
-      } catch(e) {}
-    }
-  });
-}
-function saveCycleData() {
-  var json = JSON.stringify(cycleData);
-  localStorage.setItem('stack_cycle', json);
-  idbSet('stack_cycle', json);
-}
-// Cycle phase definitions
-var CYCLE_PHASES = [
-  { id: 'menstrual', name: 'Menstrual', dayStart: 1, dayEnd: 5, color: '#bf5a7a', bg: 'rgba(191,90,122,0.15)',
-    tip: 'Energy is lowest. She may want comfort, warmth, and low-key time together. Don\'t take moodiness personally.',
-    how: 'Bring her comfort food, offer a heating pad, suggest a cozy movie night. Less planning, more presence.' },
-  { id: 'follicular', name: 'Follicular', dayStart: 6, dayEnd: 13, color: '#5abf7a', bg: 'rgba(90,191,122,0.15)',
-    tip: 'Energy and mood are rising. She\'s more open to new experiences, socializing, and trying new things.',
-    how: 'Great time to plan dates, try new restaurants, suggest adventures. She\'s feeling optimistic and creative.' },
-  { id: 'ovulation', name: 'Ovulation', dayStart: 14, dayEnd: 16, color: '#bfa85a', bg: 'rgba(191,168,90,0.15)',
-    tip: 'Peak energy, confidence, and sociability. She feels her best and is most communicative.',
-    how: 'She\'s at her most radiant. Plan something special — she\'ll be up for it. Great time for important conversations.' },
-  { id: 'luteal', name: 'Luteal', dayStart: 17, dayEnd: 28, color: '#8b5abf', bg: 'rgba(139,90,191,0.15)',
-    tip: 'PMS territory. Mood and energy decline, especially the last week. Sensitivity increases, patience decreases.',
-    how: 'Be extra patient and thoughtful. Don\'t start arguments. Surprise her with small gestures. Give space when needed but stay attentive.' }
-];
-function getCycleDay() {
-  if (cycleData.periods.length === 0) return null;
-  var lastPeriod = cycleData.periods[cycleData.periods.length - 1];
-  var start = new Date(lastPeriod.date);
-  var now = new Date();
-  start.setHours(0,0,0,0); now.setHours(0,0,0,0);
-  var dayNum = Math.floor((now - start) / 86400000) + 1;
-  // If past the avg cycle length + buffer, she might have started a new period
-  if (dayNum > cycleData.avgLength + 7) return null;
-  return dayNum;
-}
-function getCyclePhase(dayNum) {
-  if (!dayNum) return null;
-  // Scale phases to actual cycle length
-  var ratio = cycleData.avgLength / 28;
-  for (var i = CYCLE_PHASES.length - 1; i >= 0; i--) {
-    var p = CYCLE_PHASES[i];
-    var scaledStart = Math.round(p.dayStart * ratio);
-    if (scaledStart < 1) scaledStart = 1;
-    if (dayNum >= scaledStart) return p;
-  }
-  return CYCLE_PHASES[0];
-}
-function recalcAvgCycleLength() {
-  if (cycleData.periods.length < 2) return;
-  var lengths = [];
-  for (var i = 1; i < cycleData.periods.length; i++) {
-    var prev = new Date(cycleData.periods[i-1].date);
-    var curr = new Date(cycleData.periods[i].date);
-    prev.setHours(0,0,0,0); curr.setHours(0,0,0,0);
-    var diff = Math.round((curr - prev) / 86400000);
-    if (diff > 15 && diff < 50) lengths.push(diff); // sanity check
-  }
-  if (lengths.length > 0) {
-    cycleData.avgLength = Math.round(lengths.reduce(function(a,b) { return a+b; }, 0) / lengths.length);
-  }
-}
-function logPeriodStart(dateStr) {
-  cycleData.periods.push({ date: dateStr, logged: Date.now() });
-  // Sort by date
-  cycleData.periods.sort(function(a,b) { return new Date(a.date) - new Date(b.date); });
-  recalcAvgCycleLength();
-  saveCycleData();
-  render();
-}
-function confirmCyclePhase(phaseId) {
-  cycleData.confirmations.push({ phase: phaseId, date: new Date().toISOString(), dayNum: getCycleDay() });
-  saveCycleData();
-  render();
-}
-function correctCyclePhase(correctPhaseId) {
-  // User says she's actually in a different phase — adjust the last period date
-  var dayNum = getCycleDay();
-  if (!dayNum) return;
-  var phase = CYCLE_PHASES.find(function(p) { return p.id === correctPhaseId; });
-  if (!phase) return;
-  // Calculate what day 1 should have been if she's at the middle of this phase now
-  var midDay = Math.round((phase.dayStart + phase.dayEnd) / 2);
-  var newDay1 = new Date();
-  newDay1.setDate(newDay1.getDate() - midDay + 1);
-  var dateStr = newDay1.getFullYear() + '-' + String(newDay1.getMonth()+1).padStart(2,'0') + '-' + String(newDay1.getDate()).padStart(2,'0');
-  // Update last period
-  if (cycleData.periods.length > 0) {
-    cycleData.periods[cycleData.periods.length - 1].date = dateStr;
-    cycleData.periods[cycleData.periods.length - 1].corrected = true;
-  }
-  recalcAvgCycleLength();
-  saveCycleData();
-  render();
-}
-
 // Collapsible section helper
 // stateKey: key in state to persist open/closed
 // headerEl: the header element to make clickable
@@ -1845,7 +1709,11 @@ function render() {
   var dateText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   if (state._wakeTime) {
     var wakeT = new Date(state._wakeTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    dateText += '  ·  woke ' + wakeT;
+    var awakeMs = now.getTime() - state._wakeTime;
+    var awakeHrs = Math.floor(awakeMs / 3600000);
+    var awakeMins = Math.floor((awakeMs % 3600000) / 60000);
+    var awakeStr = awakeHrs > 0 ? awakeHrs + 'h ' + awakeMins + 'm' : awakeMins + 'm';
+    dateText += '  ·  woke ' + wakeT + '  ·  awake ' + awakeStr;
   }
   if (state._sleep && state._sleep.hours > 0) {
     dateText += '  ·  slept ' + state._sleep.hours + 'hr';
