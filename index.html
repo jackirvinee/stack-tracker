@@ -3505,10 +3505,17 @@ pullFromServer(true);
 
 // Auto-refresh every 60s for timers + background sync pull
 setInterval(function() {
-  // Pull from server every 60s to catch changes from other devices
   if (Date.now() - _lastPull > 55000) pullFromServer(true);
   render();
 }, 60000);
+
+// Pull immediately when switching back to the app (tab focus, phone unlock, alt-tab)
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && Date.now() - _lastPull > 5000) pullFromServer(true);
+});
+window.addEventListener('focus', function() {
+  if (Date.now() - _lastPull > 5000) pullFromServer(true);
+});
 
 // Register service worker for offline support
 if ('serviceWorker' in navigator) {
