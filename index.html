@@ -1658,6 +1658,132 @@ function showFoodModal() {
   document.body.appendChild(overlay); descInput.focus();
 }
 
+function showReportModal() {
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal';
+  modal.style.cssText = 'max-width:380px;max-height:85vh;overflow-y:auto';
+
+  var h3 = document.createElement('h3');
+  h3.textContent = 'Daily Report';
+  h3.style.cssText = 'margin-bottom:12px';
+
+  // Stats grid (rendered immediately from local state)
+  var statsGrid = document.createElement('div');
+  statsGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px';
+
+  function statBox(label, value, color) {
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center';
+    var val = document.createElement('div');
+    val.style.cssText = 'font-size:1.1rem;font-weight:700;font-family:"JetBrains Mono",monospace;color:' + (color || 'var(--text)');
+    val.textContent = value;
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:0.55rem;color:var(--muted);margin-top:2px';
+    lbl.textContent = label;
+    box.appendChild(val); box.appendChild(lbl);
+    return box;
+  }
+
+  var intakeLog = getIntakeLog();
+  var totalProtein = intakeLog.reduce(function(s, e) { return s + (e.protein_g || 0); }, 0);
+  var totalWater = state._t_water || 0;
+  var totalCaffeine = getIntakeCaffeine();
+  var waterGoal = state._waterGoal || 2500;
+  var proteinGoal = state._proteinGoal || 150;
+  var dexLog = state._dexLog || [];
+  var bfrbLog = state._bfrbLog || [];
+  var moodLog = state._moodLog || [];
+  var wakeMs = state._wakeTime ? ((Date.now() - state._wakeTime) / 3600000) : 0;
+
+  statsGrid.appendChild(statBox('awake', wakeMs > 0 ? wakeMs.toFixed(1) + 'h' : '—', 'var(--accent-blue)'));
+  statsGrid.appendChild(statBox('water', Math.round((totalWater / waterGoal) * 100) + '%', totalWater >= waterGoal ? 'var(--accent-green)' : totalWater >= waterGoal * 0.6 ? 'var(--accent-gold)' : 'var(--accent-pink)'));
+  statsGrid.appendChild(statBox('protein', totalProtein + 'g', totalProtein >= proteinGoal ? 'var(--accent-green)' : 'var(--accent-gold)'));
+  statsGrid.appendChild(statBox('caffeine', totalCaffeine + 'mg', totalCaffeine <= 200 ? 'var(--accent-green)' : totalCaffeine <= 400 ? 'var(--accent-gold)' : 'var(--accent-pink)'));
+  statsGrid.appendChild(statBox('dex doses', dexLog.length, dexLog.length > 0 ? 'var(--accent-blue)' : 'var(--muted)'));
+  statsGrid.appendChild(statBox('bfrb', bfrbLog.length, bfrbLog.length === 0 ? 'var(--accent-green)' : bfrbLog.length <= 2 ? 'var(--accent-gold)' : 'var(--accent-pink)'));
+  statsGrid.appendChild(statBox('meals/drinks', intakeLog.length, intakeLog.length >= 3 ? 'var(--accent-green)' : 'var(--accent-gold)'));
+  statsGrid.appendChild(statBox('mood logs', moodLog.length, moodLog.length > 0 ? 'var(--accent-purple)' : 'var(--muted)'));
+  var sleepHrs = state._sleep && state._sleep.hours > 0 ? state._sleep.hours : null;
+  statsGrid.appendChild(statBox('sleep', sleepHrs ? sleepHrs + 'hr' : '—', sleepHrs ? (sleepHrs >= 7 ? 'var(--accent-green)' : sleepHrs >= 5 ? 'var(--accent-gold)' : 'var(--accent-pink)') : 'var(--muted)'));
+
+  // AI narrative section
+  var aiSection = document.createElement('div');
+  aiSection.style.cssText = 'border-top:1px solid var(--border);padding-top:12px';
+
+  var aiTitle = document.createElement('div');
+  aiTitle.style.cssText = 'font-size:0.65rem;color:var(--muted);margin-bottom:8px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase';
+  aiTitle.textContent = 'AI Insights';
+
+  var aiBody = document.createElement('div');
+  aiBody.style.cssText = 'font-size:0.72rem;color:var(--sub);line-height:1.6;white-space:pre-wrap';
+  aiBody.textContent = 'Generating report...';
+
+  var genBtn = document.createElement('button');
+  genBtn.style.cssText = 'width:100%;background:var(--accent-purple);border:none;color:#fff;padding:9px;border-radius:8px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:10px';
+  genBtn.textContent = 'Generate AI Report';
+
+  aiSection.appendChild(aiTitle);
+  aiSection.appendChild(aiBody);
+  aiSection.appendChild(genBtn);
+
+  // Buttons
+  var btns = document.createElement('div');
+  btns.className = 'dose-modal-btns';
+  btns.style.marginTop = '12px';
+  var closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-cancel';
+  closeBtn.style.width = '100%';
+  closeBtn.textContent = 'Close';
+  closeBtn.addEventListener('click', function() { overlay.remove(); });
+  btns.appendChild(closeBtn);
+
+  modal.appendChild(h3);
+  modal.appendChild(statsGrid);
+  modal.appendChild(aiSection);
+  modal.appendChild(btns);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Auto-generate on open
+  aiBody.textContent = 'Generating...';
+  genBtn.style.display = 'none';
+  fetch('/api/report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state: state })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.report) {
+      aiBody.textContent = data.report;
+    } else {
+      aiBody.textContent = 'Could not generate report. Check that ANTHROPIC_API_KEY is set in Vercel.';
+      genBtn.style.display = '';
+      genBtn.textContent = 'Retry';
+    }
+  }).catch(function() {
+    aiBody.textContent = 'Network error — check your connection.';
+    genBtn.style.display = '';
+    genBtn.textContent = 'Retry';
+  });
+
+  genBtn.addEventListener('click', function() {
+    aiBody.textContent = 'Generating...';
+    genBtn.style.display = 'none';
+    fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: state })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      aiBody.textContent = data.report || 'No report returned.';
+    }).catch(function() {
+      aiBody.textContent = 'Network error.';
+      genBtn.style.display = '';
+    });
+  });
+}
+
 function showIntakeModal(type) {
   var isFood = type === 'food';
   var overlay = document.createElement('div');
@@ -1882,6 +2008,13 @@ function render() {
   importBtn.style.fontSize = '0.8rem';
   importBtn.addEventListener('click', importData);
   headerBtns.appendChild(importBtn);
+  var reportBtn = document.createElement('button');
+  reportBtn.className = 'reset-btn';
+  reportBtn.textContent = '\ud83d\udcca';
+  reportBtn.title = 'Daily report';
+  reportBtn.style.fontSize = '0.8rem';
+  reportBtn.addEventListener('click', showReportModal);
+  headerBtns.appendChild(reportBtn);
   header.appendChild(h1);
   header.appendChild(headerBtns);
   app.appendChild(header);
