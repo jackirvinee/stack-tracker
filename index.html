@@ -2673,7 +2673,7 @@ function render() {
   makeCollapsible('_col_mood', moodHeader, [moodContent], true);
   app.appendChild(moodCard);
 
-  // Cycle tracker
+  if (false) { // Cycle tracker removed
   var cycleCard = document.createElement('div');
   cycleCard.className = 'cycle-tracker';
   var cycleHeader = document.createElement('div');
@@ -2973,6 +2973,7 @@ function render() {
   cycleCard.appendChild(cycleContent);
   makeCollapsible('_col_cycle', cycleHeader, [cycleContent], true);
   app.appendChild(cycleCard);
+  } // end cycle tracker removed
 
   // Recovery protocol
   var recovery = getRecovery();
