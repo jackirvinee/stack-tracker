@@ -13,11 +13,14 @@ export default async function handler(req, res) {
       const { state } = req.body;
       if (!state) return res.status(400).json({ error: 'Missing state' });
 
-      // Store app state with 48hr TTL (covers extended sessions)
-      await redis.set('app:state', JSON.stringify(state), { ex: 48 * 3600 });
+      // Inject server timestamp for cross-device conflict resolution
+      state._lastModified = Date.now();
+
+      // Store app state with 30-day TTL (supports infrequent use)
+      await redis.set('app:state', JSON.stringify(state), { ex: 30 * 24 * 3600 });
       await redis.set('app:lastSync', Date.now());
 
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({ ok: true, lastModified: state._lastModified });
     } catch (e) {
       console.error('Sync error:', e);
       return res.status(500).json({ error: 'Internal error' });
@@ -26,8 +29,9 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const state = await redis.get('app:state');
-      return res.status(200).json({ state: state ? JSON.parse(state) : null });
+      const raw = await redis.get('app:state');
+      const state = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+      return res.status(200).json({ state: state });
     } catch (e) {
       return res.status(500).json({ error: 'Internal error' });
     }

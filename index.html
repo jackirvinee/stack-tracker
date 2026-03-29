@@ -419,9 +419,33 @@ function loadState() {
   });
 }
 function saveState() {
+  state._lastModified = Date.now();
   var json = JSON.stringify(state);
   localStorage.setItem('stack_state', json);
   idbSet('stack_state', json);
+}
+
+// Cross-device sync: pull state from server
+var _lastPull = 0;
+var _syncStatus = ''; // '', 'syncing', 'synced', 'offline'
+function pullFromServer(isBackground) {
+  if (!navigator.onLine) { _syncStatus = 'offline'; return Promise.resolve(); }
+  _syncStatus = 'syncing';
+  return fetch(API_BASE + '/sync').then(function(r) { return r.json(); }).then(function(data) {
+    if (data.state && data.state._lastModified) {
+      var localMod = state._lastModified || 0;
+      if (data.state._lastModified > localMod) {
+        // Server is newer — use it
+        state = data.state;
+        var json = JSON.stringify(state);
+        localStorage.setItem('stack_state', json);
+        idbSet('stack_state', json);
+        if (isBackground) render();
+      }
+    }
+    _syncStatus = 'synced';
+    _lastPull = Date.now();
+  }).catch(function() { _syncStatus = 'offline'; });
 }
 // Collapsible section helper
 // stateKey: key in state to persist open/closed
@@ -982,8 +1006,8 @@ function checkReminders() {
           }
         }
       }
-      // Bedtime: magnesium (after 9 PM or after end-day)
-      if (hour >= 21 || state._endDay) {
+      // Bedtime: magnesium (after 9 PM or after end-day) — suppressed in all-nighter mode
+      if (!state._allNighter && (hour >= 21 || state._endDay)) {
         var bedPhase = PHASES.find(function(p) { return p.id === 'bed'; });
         if (bedPhase) {
           var bedUntaken = [];
@@ -1047,21 +1071,43 @@ function checkReminders() {
   cafLog.forEach(function(c) { totalCafMg += parseFloat(c.mg) || 0; });
   var hoursAwake = state._wakeTime ? (now - state._wakeTime) / 3600000 : 0;
 
-  // If awake 12+ hours with high stim load, remind about crash prep
-  if (hoursAwake >= 12 && (totalDexMg > 20 || totalCafMg > 200) && !state._crashWarnSent) {
-    sendNotif('Big day — prep for the crash', hoursAwake.toFixed(0) + ' hours awake, ' + totalDexMg + 'mg Dex + ' + totalCafMg + 'mg caffeine today. Eat a big meal, take your mag + NAC, plan your wind-down.');
+  // If awake 12+ hours with high stim load, remind about crash prep (8hr in all-nighter mode)
+  var crashThreshold = state._allNighter ? 8 : 12;
+  if (hoursAwake >= crashThreshold && (totalDexMg > 20 || totalCafMg > 200) && !state._crashWarnSent) {
+    var crashMsg = state._allNighter
+      ? hoursAwake.toFixed(0) + ' hours in. Eat a full meal with protein + complex carbs NOW. Take NAC + mag. Cold water on face/wrists for alertness.'
+      : hoursAwake.toFixed(0) + ' hours awake, ' + totalDexMg + 'mg Dex + ' + totalCafMg + 'mg caffeine today. Eat a big meal, take your mag + NAC, plan your wind-down.';
+    sendNotif(state._allNighter ? 'All-nighter checkpoint' : 'Big day — prep for the crash', crashMsg);
     state._crashWarnSent = true;
     saveState();
   }
   // If awake 18+ hours, serious warning
   if (hoursAwake >= 18 && !state._extendedWarnSent) {
-    sendNotif('Extended session: 18+ hours', 'High cognitive debt building. If you can sleep, start your end-day routine. If not, eat, hydrate, take magnesium anyway — it protects regardless of sleep.');
+    var extMsg = state._allNighter
+      ? 'Cognitive debt is real. Eat protein, hydrate aggressively, take magnesium (protects even without sleep). Consider a 20-min power nap if possible.'
+      : 'High cognitive debt building. If you can sleep, start your end-day routine. If not, eat, hydrate, take magnesium anyway — it protects regardless of sleep.';
+    sendNotif('Extended session: 18+ hours', extMsg);
     state._extendedWarnSent = true;
     saveState();
   }
 
-  // --- Sleep planning question: once per evening ---
-  if (hour >= 20 && hour <= 23 && !state._endDay && (now - lastSleepAsk) > 6 * 3600000) {
+  // All-nighter periodic reminders (every 2 hours)
+  if (state._allNighter && hoursAwake >= 4 && (now - (state._lastAllNighterRemind || 0)) > 2 * 3600000) {
+    var tips = [
+      'Drink 500ml water now. Dehydration accelerates cognitive decline.',
+      'Eat something with protein and fat. Your brain needs fuel.',
+      'Stand up, stretch, splash cold water on your face. Move for 5 minutes.',
+      'Take magnesium if you haven\'t — it protects against stimulant neurotoxicity even without sleep.',
+      'Quick 20-min power nap? Even a short rest helps. Set an alarm so you don\'t oversleep.',
+    ];
+    var tipIdx = Math.floor(hoursAwake / 2) % tips.length;
+    sendNotif('All-nighter: ' + Math.round(hoursAwake) + 'h awake', tips[tipIdx]);
+    state._lastAllNighterRemind = now;
+    saveState();
+  }
+
+  // --- Sleep planning question: once per evening (suppressed in all-nighter mode) ---
+  if (!state._allNighter && hour >= 20 && hour <= 23 && !state._endDay && (now - lastSleepAsk) > 6 * 3600000) {
     sendNotif('Sleep tonight?', 'Planning to sleep? Tap "End Day" to start your wind-down. Magnesium + melatonin need 30-60 min lead time.');
     lastSleepAsk = now;
   }
@@ -1723,6 +1769,34 @@ function render() {
     dateText += '  ·  bed ' + bedT;
   }
   dateLine.textContent = dateText;
+  // All-nighter badge
+  if (state._allNighter) {
+    var allNightBadge = document.createElement('span');
+    allNightBadge.style.cssText = 'font-size:0.5rem;background:#7c3aed;color:#fff;padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle;font-weight:600;letter-spacing:0.02em';
+    allNightBadge.textContent = 'ALL-NIGHTER';
+    dateLine.appendChild(allNightBadge);
+  }
+  // All-nighter toggle button
+  var allNightBtn = document.createElement('button');
+  allNightBtn.style.cssText = 'background:none;border:none;font-size:0.85rem;cursor:pointer;margin-left:6px;vertical-align:middle;opacity:' + (state._allNighter ? '1' : '0.4') + ';padding:0';
+  allNightBtn.textContent = '\u{1F319}';
+  allNightBtn.title = state._allNighter ? 'All-nighter mode ON — tap to disable' : 'Tap to enable all-nighter mode';
+  allNightBtn.addEventListener('click', function() {
+    if (state._allNighter) {
+      if (confirm('Turn off all-nighter mode?')) { delete state._allNighter; saveState(); render(); }
+    } else {
+      if (confirm('Enable all-nighter mode? Bed-phase supplements will be hidden and sleep reminders will be suppressed.')) {
+        state._allNighter = true; saveState(); render();
+      }
+    }
+  });
+  dateLine.appendChild(allNightBtn);
+  // Sync indicator dot
+  var syncDot = document.createElement('span');
+  syncDot.style.cssText = 'display:inline-block;width:6px;height:6px;border-radius:50%;margin-left:6px;vertical-align:middle;';
+  syncDot.style.background = _syncStatus === 'synced' ? '#22c55e' : _syncStatus === 'syncing' ? '#facc15' : _syncStatus === 'offline' ? '#ef4444' : '#555';
+  syncDot.title = _syncStatus === 'synced' ? 'Synced across devices' : _syncStatus === 'syncing' ? 'Syncing...' : _syncStatus === 'offline' ? 'Offline' : 'Connecting...';
+  dateLine.appendChild(syncDot);
   app.appendChild(dateLine);
 
   // Status bar removed
@@ -2754,8 +2828,12 @@ function render() {
     app.appendChild(recBtn);
   }
 
-  // Phases
-  for (const phase of PHASES) {
+  // Phases (skip bed/night hygiene in all-nighter mode)
+  var activePhases = PHASES;
+  if (state._allNighter) {
+    activePhases = PHASES.filter(function(p) { return p.id !== 'bed' && p.id !== 'night_hygiene'; });
+  }
+  for (const phase of activePhases) {
     const allDone = phase.items.every(i => state[i.id]);
     const phaseDiv = document.createElement('div');
     phaseDiv.className = 'phase' + (allDone ? ' phase-done' : '');
@@ -2890,7 +2968,8 @@ function showQuickLogSheet() {
   sheet.appendChild(title);
   var grid = document.createElement('div');
   grid.className = 'quick-log-grid';
-  PHASES.forEach(function(phase) {
+  var qlPhases = state._allNighter ? PHASES.filter(function(p) { return p.id !== 'bed' && p.id !== 'night_hygiene'; }) : PHASES;
+  qlPhases.forEach(function(phase) {
     phase.items.forEach(function(item) {
       var row = document.createElement('div');
       row.className = 'quick-log-item' + (state[item.id] ? ' taken' : '');
@@ -3222,8 +3301,15 @@ loadState();
 loadCycleData();
 render();
 
-// Auto-refresh every 60s for timers
-setInterval(render, 60000);
+// Pull server state on load (async, won't block render)
+pullFromServer(true);
+
+// Auto-refresh every 60s for timers + background sync pull
+setInterval(function() {
+  // Pull from server every 60s to catch changes from other devices
+  if (Date.now() - _lastPull > 55000) pullFromServer(true);
+  render();
+}, 60000);
 
 // Register service worker for offline support
 if ('serviceWorker' in navigator) {

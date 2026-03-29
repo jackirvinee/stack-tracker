@@ -129,6 +129,9 @@ export default async function handler(req, res) {
 
       if (!inWindow) continue;
 
+      // Skip bed phase in all-nighter mode
+      if (state._allNighter && phase.id === 'bed') continue;
+
       // If phase needs dex to be worn off, check
       if (phase.needsDexWornOff && dexActive) continue;
 
@@ -194,12 +197,15 @@ export default async function handler(req, res) {
     // --- Crash prevention (extended sessions) ---
     const hoursAwake = state._wakeTime ? (now - state._wakeTime) / 3600000 : 0;
 
-    if (hoursAwake >= 12 && !(await wasSent('crash-12h', 12 * 3600000))) {
+    const crashThreshold = state._allNighter ? 8 : 12;
+    if (hoursAwake >= crashThreshold && !(await wasSent('crash-12h', 12 * 3600000))) {
       let totalDex = 0;
       dexLog.forEach(d => totalDex += parseFloat(d.mg) || 0);
       notifications.push({
-        title: 'Big day — prep for crash',
-        body: `${Math.round(hoursAwake)}hr awake, ${totalDex}mg Dex today. Eat, take mag + NAC, plan wind-down.`
+        title: state._allNighter ? 'All-nighter checkpoint' : 'Big day — prep for crash',
+        body: state._allNighter
+          ? `${Math.round(hoursAwake)}hr in. Eat protein + complex carbs NOW. Take NAC + mag. Cold water on face for alertness.`
+          : `${Math.round(hoursAwake)}hr awake, ${totalDex}mg Dex today. Eat, take mag + NAC, plan wind-down.`
       });
       await markSent('crash-12h');
     }
@@ -207,13 +213,15 @@ export default async function handler(req, res) {
     if (hoursAwake >= 18 && !(await wasSent('crash-18h', 18 * 3600000))) {
       notifications.push({
         title: '18+ hours awake',
-        body: 'Serious cognitive debt. Sleep if you can. Take magnesium regardless — it protects without sleep.'
+        body: state._allNighter
+          ? 'Eat protein, hydrate aggressively, take magnesium. Consider a 20-min power nap if possible.'
+          : 'Serious cognitive debt. Sleep if you can. Take magnesium regardless — it protects without sleep.'
       });
       await markSent('crash-18h');
     }
 
-    // --- Sleep planning ---
-    if (hour >= 20 && !state._endDay && !(await wasSent('sleep-ask', 6 * 3600000))) {
+    // --- Sleep planning (suppressed in all-nighter mode) ---
+    if (!state._allNighter && hour >= 20 && !state._endDay && !(await wasSent('sleep-ask', 6 * 3600000))) {
       notifications.push({
         title: 'Sleep tonight?',
         body: 'Tap "End Day" to start wind-down. Magnesium + melatonin need 30-60 min lead time.'
