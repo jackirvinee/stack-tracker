@@ -832,7 +832,7 @@ function subscribeToPush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
   navigator.serviceWorker.ready.then(function(reg) {
     return reg.pushManager.getSubscription().then(function(sub) {
-      if (sub) return sub; // Already subscribed
+      if (sub) return sub;
       return reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
@@ -840,7 +840,8 @@ function subscribeToPush() {
     });
   }).then(function(sub) {
     if (!sub) return;
-    // Send subscription to server
+    // Always re-post to server on load — ensures Redis has the current subscription
+    // even after TTL expiry, Redis flush, or first load on a new device
     fetch(API_BASE + '/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
