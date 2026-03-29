@@ -628,6 +628,30 @@ function removeFoodEntry(ts) {
   state._foodLog = state._foodLog.filter(function(e) { return e.ts !== ts; });
   saveState(); render();
 }
+// --- Unified intake log (food + drink with AI-parsed macros) ---
+function getIntakeLog() { return state._intakeLog || []; }
+function addIntakeEntry(type, summary, protein_g, water_ml, caffeine_mg, photo) {
+  if (!state._intakeLog) state._intakeLog = [];
+  var ts = Date.now();
+  var timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  state._intakeLog.push({ ts: ts, time: timeStr, type: type, summary: summary, protein_g: protein_g || 0, water_ml: water_ml || 0, caffeine_mg: caffeine_mg || 0, photo: photo || null });
+  state['_t_water'] = (state['_t_water'] || 0) + (water_ml || 0);
+  state['_t_protein'] = (state['_t_protein'] || 0) + (protein_g || 0);
+  saveState(); render();
+}
+function removeIntakeEntry(ts) {
+  if (!state._intakeLog) return;
+  var entry = state._intakeLog.find(function(e) { return e.ts === ts; });
+  if (entry) {
+    state['_t_water'] = Math.max(0, (state['_t_water'] || 0) - (entry.water_ml || 0));
+    state['_t_protein'] = Math.max(0, (state['_t_protein'] || 0) - (entry.protein_g || 0));
+  }
+  state._intakeLog = state._intakeLog.filter(function(e) { return e.ts !== ts; });
+  saveState(); render();
+}
+function getIntakeCaffeine() {
+  return (state._intakeLog || []).reduce(function(s, e) { return s + (e.caffeine_mg || 0); }, 0);
+}
 function compressPhoto(file, maxPx, quality, callback) {
   var reader = new FileReader();
   reader.onload = function(e) {
@@ -1634,6 +1658,135 @@ function showFoodModal() {
   document.body.appendChild(overlay); descInput.focus();
 }
 
+function showIntakeModal(type) {
+  var isFood = type === 'food';
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal';
+  modal.style.maxWidth = '340px';
+  var h3 = document.createElement('h3');
+  h3.textContent = isFood ? 'Log food' : 'Log drink';
+
+  var descLabel = document.createElement('label');
+  descLabel.textContent = isFood ? 'What did you eat?' : 'What did you drink?';
+  var descInput = document.createElement('input');
+  descInput.type = 'text';
+  descInput.placeholder = isFood ? 'e.g. 2 scrambled eggs, toast' : 'e.g. large coffee, 3 glasses of coke';
+  descInput.style.cssText = 'width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.85rem;font-family:inherit;margin-bottom:4px';
+
+  var photoLabel = document.createElement('label');
+  photoLabel.textContent = 'Photo (optional)';
+  photoLabel.style.cssText = 'font-size:0.65rem;color:var(--sub);display:block;margin-bottom:4px';
+  var photoInput = document.createElement('input');
+  photoInput.type = 'file'; photoInput.accept = 'image/*';
+  photoInput.setAttribute('capture', 'environment');
+  photoInput.style.cssText = 'font-size:0.7rem;color:var(--sub);margin-bottom:4px';
+  var preview = document.createElement('img');
+  preview.className = 'photo-preview';
+  var photoData = null;
+  photoInput.addEventListener('change', function() {
+    if (photoInput.files && photoInput.files[0]) {
+      compressPhoto(photoInput.files[0], 400, 0.7, function(base64) {
+        photoData = base64;
+        preview.src = base64;
+        preview.style.display = 'block';
+      });
+    }
+  });
+
+  var analyzeBtn = document.createElement('button');
+  analyzeBtn.style.cssText = 'width:100%;background:var(--accent-blue);margin:8px 0;font-size:0.8rem;padding:9px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-family:inherit;font-weight:600';
+  analyzeBtn.textContent = isFood ? 'Analyze food' : 'Analyze drink';
+
+  var resultPanel = document.createElement('div');
+  resultPanel.style.cssText = 'display:none;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card);margin-bottom:8px';
+  var summaryEl = document.createElement('div');
+  summaryEl.style.cssText = 'font-size:0.72rem;color:var(--text);margin-bottom:8px;font-weight:600;font-style:italic';
+  var macroRow = document.createElement('div');
+  macroRow.style.cssText = 'display:flex;gap:8px';
+  function makeMacroField(label, unit) {
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'flex:1;text-align:center';
+    var lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:0.55rem;color:var(--muted);margin-bottom:2px';
+    lbl.textContent = label + ' (' + unit + ')';
+    var inp = document.createElement('input');
+    inp.type = 'number'; inp.inputMode = 'numeric'; inp.min = '0';
+    inp.style.cssText = 'width:100%;text-align:center;padding:4px 2px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.8rem;font-family:"JetBrains Mono",monospace';
+    inp.value = '0';
+    wrap.appendChild(lbl); wrap.appendChild(inp);
+    return { wrap: wrap, inp: inp };
+  }
+  var proteinField = makeMacroField('Protein', 'g');
+  var waterField = makeMacroField('Water', 'ml');
+  var cafField = makeMacroField('Caffeine', 'mg');
+  macroRow.appendChild(proteinField.wrap);
+  macroRow.appendChild(waterField.wrap);
+  macroRow.appendChild(cafField.wrap);
+  resultPanel.appendChild(summaryEl);
+  resultPanel.appendChild(macroRow);
+
+  var saveBtn; // forward declare
+  analyzeBtn.addEventListener('click', function() {
+    var desc = descInput.value.trim();
+    if (!desc && !photoData) { descInput.focus(); return; }
+    analyzeBtn.textContent = 'Analyzing...';
+    analyzeBtn.disabled = true;
+    fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: desc, type: type, photo: photoData })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      summaryEl.textContent = data.summary || desc;
+      proteinField.inp.value = data.protein_g || 0;
+      waterField.inp.value = data.water_ml || 0;
+      cafField.inp.value = data.caffeine_mg || 0;
+      resultPanel.style.display = 'block';
+      analyzeBtn.textContent = 'Re-analyze';
+      analyzeBtn.disabled = false;
+      saveBtn.style.display = '';
+    }).catch(function() {
+      summaryEl.textContent = desc || (isFood ? 'Food' : 'Drink');
+      resultPanel.style.display = 'block';
+      analyzeBtn.textContent = isFood ? 'Analyze food' : 'Analyze drink';
+      analyzeBtn.disabled = false;
+      saveBtn.style.display = '';
+    });
+  });
+
+  var btns = document.createElement('div');
+  btns.className = 'dose-modal-btns';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'modal-cancel'; cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  saveBtn = document.createElement('button');
+  saveBtn.className = 'modal-save';
+  saveBtn.style.background = isFood ? 'var(--accent-green)' : 'var(--accent-blue)';
+  saveBtn.textContent = 'Log ' + (isFood ? 'food' : 'drink');
+  saveBtn.style.display = 'none';
+  saveBtn.addEventListener('click', function() {
+    var summary = summaryEl.textContent || descInput.value.trim() || (isFood ? 'Food' : 'Drink');
+    var protein = parseInt(proteinField.inp.value, 10) || 0;
+    var water = parseInt(waterField.inp.value, 10) || 0;
+    var caffeine = parseInt(cafField.inp.value, 10) || 0;
+    addIntakeEntry(type, summary, protein, water, caffeine, photoData);
+    overlay.remove();
+  });
+  btns.appendChild(cancelBtn); btns.appendChild(saveBtn);
+
+  modal.appendChild(h3);
+  modal.appendChild(descLabel); modal.appendChild(descInput);
+  modal.appendChild(photoLabel); modal.appendChild(photoInput); modal.appendChild(preview);
+  modal.appendChild(analyzeBtn);
+  modal.appendChild(resultPanel);
+  modal.appendChild(btns);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  descInput.focus();
+}
+
 function showRecoveryModal() {
   var overlay = document.createElement('div');
   overlay.className = 'dose-modal-overlay';
@@ -1902,6 +2055,37 @@ function render() {
     t.appendChild(controls);
     trackersDiv.appendChild(t);
   });
+
+  // Caffeine progress (read-only, derived from intake log)
+  var cafTotalMgNow = getIntakeCaffeine();
+  var cafLimitNow = 400;
+  var cafPctNow = Math.min(100, Math.round((cafTotalMgNow / cafLimitNow) * 100));
+  var cafTrackerDiv = document.createElement('div');
+  cafTrackerDiv.className = 'tracker tracker-caf';
+  var cafTopRow = document.createElement('div');
+  cafTopRow.className = 'tracker-top';
+  var cafLblEl = document.createElement('div');
+  cafLblEl.className = 'tracker-label';
+  cafLblEl.textContent = 'Caffeine';
+  var cafReadEl = document.createElement('div');
+  cafReadEl.className = 'tracker-reading';
+  var cafStrong = document.createElement('strong');
+  cafStrong.textContent = cafTotalMgNow;
+  cafReadEl.appendChild(cafStrong);
+  cafReadEl.appendChild(document.createTextNode(' / ' + cafLimitNow + ' mg'));
+  if (cafTotalMgNow > cafLimitNow) cafReadEl.style.color = 'var(--accent-pink)';
+  cafTopRow.appendChild(cafLblEl); cafTopRow.appendChild(cafReadEl);
+  var cafBarWrap = document.createElement('div');
+  cafBarWrap.className = 'tracker-bar-wrap';
+  var cafBarFill = document.createElement('div');
+  cafBarFill.className = 'tracker-bar-fill';
+  cafBarFill.style.width = cafPctNow + '%';
+  var cafColor = cafTotalMgNow <= 200 ? '' : cafTotalMgNow <= 300 ? 'var(--accent-gold)' : cafTotalMgNow <= 400 ? 'var(--accent-warm)' : 'var(--accent-pink)';
+  if (cafColor) cafBarFill.style.background = cafColor;
+  cafBarWrap.appendChild(cafBarFill);
+  cafTrackerDiv.appendChild(cafTopRow); cafTrackerDiv.appendChild(cafBarWrap);
+  trackersDiv.appendChild(cafTrackerDiv);
+
   app.appendChild(trackersDiv);
   waterGoalGlobal = waterGoal;
 
@@ -2032,113 +2216,85 @@ function render() {
   makeCollapsible('_col_dex', dexHeader, [dexList, dexBtn], true);
   app.appendChild(dexCard);
 
-  // Caffeine tracker
-  var cafCard = document.createElement('div');
-  cafCard.className = 'caf-tracker';
-  var cafHeader = document.createElement('div');
-  cafHeader.className = 'caf-tracker-header';
-  var cafTitle = document.createElement('div');
-  cafTitle.className = 'caf-tracker-title';
-  cafTitle.textContent = 'Caffeine today';
-  var cafEntries = getCafLog();
-  var cafTotalMg = cafEntries.reduce(function(s, e) { return s + parseFloat(e.mg || 0); }, 0);
-  var cafTotal = document.createElement('div');
-  cafTotal.className = 'caf-tracker-total';
-  cafTotal.textContent = cafTotalMg > 0 ? cafTotalMg + ' mg total' : '';
-  cafHeader.appendChild(cafTitle); cafHeader.appendChild(cafTotal);
-  cafCard.appendChild(cafHeader);
+  // Food & Drink card
+  var intakeCard = document.createElement('div');
+  intakeCard.className = 'caf-tracker';
+  var intakeHeader = document.createElement('div');
+  intakeHeader.className = 'caf-tracker-header';
+  var intakeTitle = document.createElement('div');
+  intakeTitle.className = 'caf-tracker-title';
+  intakeTitle.textContent = 'Food & Drink';
+  intakeHeader.appendChild(intakeTitle);
+  intakeCard.appendChild(intakeHeader);
 
-  // Caffeine progress bar (400mg limit)
-  var cafLimit = 400;
-  var cafPct = Math.min(100, Math.round((cafTotalMg / cafLimit) * 100));
-  var cafProgWrap = document.createElement('div');
-  cafProgWrap.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
-  var cafProgTrack = document.createElement('div');
-  cafProgTrack.style.cssText = 'flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden';
-  var cafProgFill = document.createElement('div');
-  var cafBarColor = cafTotalMg <= 200 ? 'var(--accent-green)' : cafTotalMg <= 300 ? 'var(--accent-gold)' : cafTotalMg <= 400 ? 'var(--accent-warm)' : 'var(--accent-pink)';
-  cafProgFill.style.cssText = 'height:100%;border-radius:3px;transition:width 0.4s ease;background:' + cafBarColor;
-  cafProgFill.style.width = cafPct + '%';
-  cafProgTrack.appendChild(cafProgFill);
-  var cafProgLabel = document.createElement('div');
-  cafProgLabel.style.cssText = 'font-family:"JetBrains Mono",monospace;font-size:0.6rem;color:var(--muted);min-width:70px;text-align:right';
-  cafProgLabel.textContent = cafTotalMg + ' / ' + cafLimit + ' mg';
-  if (cafTotalMg > cafLimit) { cafProgLabel.style.color = 'var(--accent-pink)'; cafProgLabel.textContent += ' ⚠'; }
-  cafProgWrap.appendChild(cafProgTrack);
-  cafProgWrap.appendChild(cafProgLabel);
-  cafCard.appendChild(cafProgWrap);
-
-  var cafList = document.createElement('div');
-  if (cafEntries.length === 0) {
-    var cafEmpty = document.createElement('div');
-    cafEmpty.className = 'dex-empty';
-    cafEmpty.textContent = 'No caffeine logged';
-    cafList.appendChild(cafEmpty);
+  var intakeEntries = getIntakeLog();
+  var intakeList = document.createElement('div');
+  if (intakeEntries.length === 0) {
+    var intakeEmpty = document.createElement('div');
+    intakeEmpty.className = 'dex-empty';
+    intakeEmpty.textContent = 'Nothing logged yet';
+    intakeList.appendChild(intakeEmpty);
   } else {
-    cafEntries.forEach(function(entry) {
+    intakeEntries.slice().reverse().forEach(function(entry) {
       var row = document.createElement('div');
-      row.className = 'caf-log-item';
-      var ct = document.createElement('div');
-      ct.className = 'caf-log-time'; ct.textContent = entry.time;
-      ct.style.cursor = 'pointer';
-      ct.style.textDecoration = 'underline';
-      ct.style.textDecorationStyle = 'dotted';
-      ct.addEventListener('click', (function(ent) {
-        return function(ev) {
-          ev.stopPropagation();
-          showEditTimeModal(ent.ts, function(newTs) {
-            var nd = new Date(newTs);
-            var isToday = nd.toDateString() === new Date().toDateString();
-            var displayTime = nd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            ent.time = isToday ? displayTime : nd.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + displayTime;
-            ent.ts = newTs;
-            saveState(); render();
-          });
-        };
-      })(entry));
-      var ci = document.createElement('div');
-      ci.className = 'caf-log-info'; ci.textContent = entry.mg + ' mg';
-      var cb = document.createElement('div');
-      cb.className = 'caf-log-badge'; cb.textContent = entry.type;
-      var cx = document.createElement('button');
-      cx.className = 'caf-log-x'; cx.textContent = '\u00d7';
-      cx.addEventListener('click', (function(ts) { return function() { removeCafDose(ts); }; })(entry.ts));
-      row.appendChild(ct); row.appendChild(ci); row.appendChild(cb); row.appendChild(cx);
-      cafList.appendChild(row);
-      // Caffeine timer
-      var cafElapsed = (Date.now() - entry.ts) / 60000;
-      if (cafElapsed < CAF_EFFECTIVE_MIN * 1.1) {
-        var cafTimer = document.createElement('div');
-        cafTimer.className = 'caf-timer';
-        var cafBar = document.createElement('div');
-        cafBar.className = 'caf-timer-bar';
-        var cafFill = document.createElement('div');
-        cafFill.className = 'caf-timer-fill';
-        var cafRemaining = Math.max(0, 1 - cafElapsed / CAF_EFFECTIVE_MIN);
-        cafFill.style.width = (cafRemaining * 100) + '%';
-        cafBar.appendChild(cafFill);
-        var cafLbl = document.createElement('div');
-        cafLbl.className = 'caf-timer-label';
-        if (cafElapsed < CAF_EFFECTIVE_MIN) {
-          var cafMinLeft = Math.ceil(CAF_EFFECTIVE_MIN - cafElapsed);
-          var cafH = Math.floor(cafMinLeft / 60), cafM = cafMinLeft % 60;
-          cafLbl.textContent = 'Active — ' + (cafH > 0 ? cafH + 'h ' : '') + cafM + 'm remaining';
-        } else {
-          cafLbl.textContent = 'Worn off';
-        }
-        cafTimer.appendChild(cafBar); cafTimer.appendChild(cafLbl);
-        cafList.appendChild(cafTimer);
+      row.style.cssText = 'padding:6px 0;border-bottom:1px solid var(--border)';
+      var topRow = document.createElement('div');
+      topRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:3px';
+      var timeLbl = document.createElement('div');
+      timeLbl.style.cssText = 'font-size:0.62rem;color:var(--sub);min-width:36px;font-family:"JetBrains Mono",monospace';
+      timeLbl.textContent = entry.time;
+      var typeBadge = document.createElement('div');
+      typeBadge.style.cssText = 'font-size:0.52rem;padding:1px 5px;border-radius:8px;font-weight:600;flex-shrink:0;' + (entry.type === 'food' ? 'background:var(--accent-green);color:#fff' : 'background:var(--accent-blue);color:#fff');
+      typeBadge.textContent = entry.type;
+      var summaryLbl = document.createElement('div');
+      summaryLbl.style.cssText = 'flex:1;font-size:0.72rem;color:var(--text)';
+      summaryLbl.textContent = entry.summary;
+      var delBtn = document.createElement('button');
+      delBtn.className = 'caf-log-x';
+      delBtn.textContent = '\u00d7';
+      delBtn.addEventListener('click', (function(ts) { return function() { removeIntakeEntry(ts); }; })(entry.ts));
+      topRow.appendChild(timeLbl);
+      topRow.appendChild(typeBadge);
+      topRow.appendChild(summaryLbl);
+      topRow.appendChild(delBtn);
+      row.appendChild(topRow);
+      var macros = [];
+      if (entry.protein_g > 0) macros.push('protein ' + entry.protein_g + 'g');
+      if (entry.water_ml > 0) macros.push('water ' + entry.water_ml + 'ml');
+      if (entry.caffeine_mg > 0) macros.push('caf ' + entry.caffeine_mg + 'mg');
+      if (macros.length > 0) {
+        var macroEl = document.createElement('div');
+        macroEl.style.cssText = 'font-size:0.58rem;color:var(--muted);font-family:"JetBrains Mono",monospace;padding-left:42px';
+        macroEl.textContent = macros.join(' · ');
+        row.appendChild(macroEl);
       }
+      if (entry.photo) {
+        var thumb = document.createElement('img');
+        thumb.className = 'food-thumb';
+        thumb.src = entry.photo; thumb.alt = '';
+        thumb.style.marginTop = '4px';
+        row.appendChild(thumb);
+      }
+      intakeList.appendChild(row);
     });
   }
-  cafCard.appendChild(cafList);
-  var cafBtn = document.createElement('button');
-  cafBtn.className = 'caf-log-btn';
-  cafBtn.textContent = '+ log caffeine';
-  cafBtn.addEventListener('click', showCafModal);
-  cafCard.appendChild(cafBtn);
-  makeCollapsible('_col_caf', cafHeader, [cafProgWrap, cafList, cafBtn], true);
-  app.appendChild(cafCard);
+  intakeCard.appendChild(intakeList);
+
+  var intakeBtnsRow = document.createElement('div');
+  intakeBtnsRow.style.cssText = 'display:flex;gap:8px;margin-top:8px';
+  var intakeFoodBtn = document.createElement('button');
+  intakeFoodBtn.style.cssText = 'flex:1;padding:9px;border-radius:8px;border:1px solid var(--accent-green);background:transparent;color:var(--accent-green);font-size:0.72rem;cursor:pointer;font-family:inherit;font-weight:600';
+  intakeFoodBtn.textContent = '+ log food';
+  intakeFoodBtn.addEventListener('click', function() { showIntakeModal('food'); });
+  var intakeDrinkBtn = document.createElement('button');
+  intakeDrinkBtn.style.cssText = 'flex:1;padding:9px;border-radius:8px;border:1px solid var(--accent-blue);background:transparent;color:var(--accent-blue);font-size:0.72rem;cursor:pointer;font-family:inherit;font-weight:600';
+  intakeDrinkBtn.textContent = '+ log drink';
+  intakeDrinkBtn.addEventListener('click', function() { showIntakeModal('drink'); });
+  intakeBtnsRow.appendChild(intakeFoodBtn);
+  intakeBtnsRow.appendChild(intakeDrinkBtn);
+  intakeCard.appendChild(intakeBtnsRow);
+  makeCollapsible('_col_intake', intakeHeader, [intakeList, intakeBtnsRow], true);
+  app.appendChild(intakeCard);
 
   // BFRB (hair pulling) tracker
   var bfrbCard = document.createElement('div');
@@ -2684,98 +2840,6 @@ function render() {
   cycleCard.appendChild(cycleContent);
   makeCollapsible('_col_cycle', cycleHeader, [cycleContent], true);
   app.appendChild(cycleCard);
-
-  // Food log
-  var foodCard = document.createElement('div');
-  foodCard.className = 'food-log';
-  var foodHeader = document.createElement('div');
-  foodHeader.className = 'food-log-header';
-  var foodTitle = document.createElement('div');
-  foodTitle.className = 'food-log-title';
-  foodTitle.textContent = 'Food log';
-  foodHeader.appendChild(foodTitle);
-  foodCard.appendChild(foodHeader);
-  var foodContent = document.createElement('div');
-  var foodEntries = getFoodLog();
-  if (foodEntries.length > 0) {
-    foodEntries.slice().reverse().forEach(function(entry) {
-      var fe = document.createElement('div');
-      fe.className = 'food-entry';
-      if (entry.photo) {
-        var thumb = document.createElement('img');
-        thumb.className = 'food-thumb';
-        thumb.src = entry.photo;
-        thumb.alt = '';
-        fe.appendChild(thumb);
-      }
-      var body = document.createElement('div');
-      body.className = 'food-entry-body';
-      var desc = document.createElement('div');
-      desc.className = 'food-entry-desc';
-      desc.textContent = entry.desc;
-      var meta = document.createElement('div');
-      meta.className = 'food-entry-meta';
-      meta.textContent = entry.time;
-      body.appendChild(desc); body.appendChild(meta);
-      if (entry.categories && entry.categories.length > 0) {
-        var cats = document.createElement('div');
-        cats.className = 'food-cats';
-        entry.categories.forEach(function(c) {
-          var pill = document.createElement('span');
-          pill.className = 'food-cat-pill';
-          pill.textContent = c;
-          cats.appendChild(pill);
-        });
-        body.appendChild(cats);
-      }
-      fe.appendChild(body);
-      var fx = document.createElement('button');
-      fx.className = 'food-entry-x';
-      fx.textContent = '\u00d7';
-      fx.addEventListener('click', (function(ts) { return function() { removeFoodEntry(ts); }; })(entry.ts));
-      fe.appendChild(fx);
-      foodContent.appendChild(fe);
-    });
-  }
-  // Nutrient coverage summary
-  var coveredCats = {};
-  foodEntries.forEach(function(f) { (f.categories || []).forEach(function(c) { coveredCats[c] = true; }); });
-  var missingCats = FOOD_CATEGORIES.filter(function(c) { return !coveredCats[c]; });
-  if (foodEntries.length > 0) {
-    var summary = document.createElement('div');
-    summary.className = 'food-summary';
-    var sumTitle = document.createElement('div');
-    sumTitle.className = 'food-summary-title';
-    sumTitle.textContent = 'Nutrient coverage';
-    summary.appendChild(sumTitle);
-    var sumGrid = document.createElement('div');
-    sumGrid.className = 'food-summary-grid';
-    FOOD_CATEGORIES.forEach(function(cat) {
-      var item = document.createElement('div');
-      item.className = 'food-summary-item' + (coveredCats[cat] ? ' covered' : '');
-      item.textContent = (coveredCats[cat] ? '\u2713 ' : '') + cat;
-      sumGrid.appendChild(item);
-    });
-    summary.appendChild(sumGrid);
-    // Evening recommendation
-    if (new Date().getHours() >= 16 && missingCats.length > 0) {
-      var rec = document.createElement('div');
-      rec.className = 'food-rec';
-      var top3 = missingCats.slice(0, 3);
-      var suggests = top3.map(function(c) { return NUTRIENT_MAP[c] ? NUTRIENT_MAP[c].suggest : c; });
-      rec.textContent = 'Missing nutrients — try: ' + suggests.join(' · ');
-      summary.appendChild(rec);
-    }
-    foodContent.appendChild(summary);
-  }
-  var foodBtn = document.createElement('button');
-  foodBtn.className = 'food-add-btn';
-  foodBtn.textContent = '+ log meal';
-  foodBtn.addEventListener('click', showFoodModal);
-  foodContent.appendChild(foodBtn);
-  foodCard.appendChild(foodContent);
-  makeCollapsible('_col_food', foodHeader, [foodContent], true);
-  app.appendChild(foodCard);
 
   // Recovery protocol
   var recovery = getRecovery();

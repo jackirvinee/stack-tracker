@@ -179,15 +179,16 @@ export default async function handler(req, res) {
     }
 
     // --- Caffeine fade ---
-    const cafLog = state._cafLog || [];
-    for (const c of cafLog) {
+    const intakeLog = state._intakeLog || [];
+    for (const c of intakeLog) {
+      if (!c.caffeine_mg || c.caffeine_mg <= 0) continue;
       const elapsed = (now - c.ts) / 60000;
       if (elapsed >= 300 && elapsed < 330) {
         const sentKey = `caf-fade-${c.ts}`;
         if (!(await wasSent(sentKey, 360 * 60000))) {
           notifications.push({
             title: 'Caffeine fading',
-            body: `${c.mg}mg from ${c.time} is wearing off. Drink water, avoid crash-redose.`
+            body: `${c.caffeine_mg}mg from ${c.time} is wearing off. Drink water, avoid crash-redose.`
           });
           await markSent(sentKey);
         }
