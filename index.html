@@ -1207,6 +1207,43 @@ function showEditTimeModal(currentTs, onSave) {
   document.body.appendChild(overlay);
 }
 
+function showEditSleepModal() {
+  var overlay = document.createElement('div');
+  overlay.className = 'dose-modal-overlay';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  var modal = document.createElement('div');
+  modal.className = 'dose-modal';
+  var h3 = document.createElement('h3');
+  h3.textContent = 'Edit sleep';
+
+  var label = document.createElement('label');
+  label.textContent = 'Hours slept';
+  var input = document.createElement('input');
+  input.type = 'number'; input.inputMode = 'decimal'; input.min = '0'; input.max = '24'; input.step = '0.5';
+  input.value = (state._sleep && state._sleep.hours) ? state._sleep.hours : '';
+  input.placeholder = 'e.g. 7.5';
+
+  var btns = document.createElement('div');
+  btns.className = 'dose-modal-btns';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'modal-cancel'; cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', function() { overlay.remove(); });
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'modal-save'; saveBtn.textContent = 'Save';
+  saveBtn.addEventListener('click', function() {
+    var hrs = parseFloat(input.value);
+    if (isNaN(hrs) || hrs < 0) { input.focus(); return; }
+    state._sleep = { hours: hrs };
+    saveState(); render(); overlay.remove();
+  });
+  btns.appendChild(cancelBtn); btns.appendChild(saveBtn);
+  modal.appendChild(h3);
+  modal.appendChild(label); modal.appendChild(input);
+  modal.appendChild(btns); overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  input.focus();
+}
+
 function showDoseModal() {
   var overlay = document.createElement('div');
   overlay.className = 'dose-modal-overlay';
@@ -2039,23 +2076,68 @@ function render() {
   const dateLine = document.createElement('div');
   dateLine.className = 'date-line';
   const now = new Date();
-  var dateText = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+  function dateSpan(text) {
+    var s = document.createElement('span'); s.textContent = text; return s;
+  }
+  function editableSpan(text, onClick) {
+    var s = document.createElement('span');
+    s.textContent = text;
+    s.style.cssText = 'cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px';
+    s.addEventListener('click', onClick);
+    return s;
+  }
+
+  dateLine.appendChild(dateSpan(now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })));
+
   if (state._wakeTime) {
     var wakeT = new Date(state._wakeTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     var awakeMs = now.getTime() - state._wakeTime;
     var awakeHrs = Math.floor(awakeMs / 3600000);
     var awakeMins = Math.floor((awakeMs % 3600000) / 60000);
     var awakeStr = awakeHrs > 0 ? awakeHrs + 'h ' + awakeMins + 'm' : awakeMins + 'm';
-    dateText += '  ·  woke ' + wakeT + '  ·  awake ' + awakeStr;
+    dateLine.appendChild(dateSpan('  ·  woke '));
+    dateLine.appendChild(editableSpan(wakeT, function() {
+      showEditTimeModal(state._wakeTime, function(newTs) {
+        state._wakeTime = newTs; saveState(); render();
+      });
+    }));
+    dateLine.appendChild(dateSpan('  ·  awake ' + awakeStr));
+  } else {
+    dateLine.appendChild(dateSpan('  ·  '));
+    dateLine.appendChild(editableSpan('set wake time', function() {
+      showEditTimeModal(Date.now(), function(newTs) {
+        state._wakeTime = newTs; saveState(); render();
+      });
+    }));
   }
+
   if (state._sleep && state._sleep.hours > 0) {
-    dateText += '  ·  slept ' + state._sleep.hours + 'hr';
+    dateLine.appendChild(dateSpan('  ·  slept '));
+    dateLine.appendChild(editableSpan(state._sleep.hours + 'hr', function() {
+      showEditSleepModal();
+    }));
+  } else {
+    dateLine.appendChild(dateSpan('  ·  '));
+    dateLine.appendChild(editableSpan('log sleep', function() { showEditSleepModal(); }));
   }
+
   if (state._endDay) {
     var bedT = new Date(state._endDay).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    dateText += '  ·  bed ' + bedT;
+    dateLine.appendChild(dateSpan('  ·  bed '));
+    dateLine.appendChild(editableSpan(bedT, function() {
+      showEditTimeModal(state._endDay, function(newTs) {
+        state._endDay = newTs; saveState(); render();
+      });
+    }));
+  } else {
+    dateLine.appendChild(dateSpan('  ·  '));
+    dateLine.appendChild(editableSpan('set bed time', function() {
+      showEditTimeModal(Date.now(), function(newTs) {
+        state._endDay = newTs; saveState(); render();
+      });
+    }));
   }
-  dateLine.textContent = dateText;
   // All-nighter badge
   if (state._allNighter) {
     var allNightBadge = document.createElement('span');
